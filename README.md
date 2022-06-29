@@ -1,5 +1,6 @@
-# Master thesis: What if the Greenland was green?
-### Exploring the climate feedbacks initiated by natural vegetation adaptation in the boral zone
+# What if the Greenland was green? - exploring the climate feedbacks initiated by natural vegetation adaptation in the boral zone
+
+This is my master thesis work, supervised by [Terje Koren Berntsen](https://www.mn.uio.no/geo/english/people/aca/metos/terjebe/), [Sara Marie Blichner](https://github.com/sarambl), [Trude Storevlmo](https://www.mn.uio.no/geo/english/people/aca/metos/truds/index.html), at the [UiO - University of Oslo](https://www.uio.no/english/).
 
 🚧 *It is a WIP project* 🚧
 
