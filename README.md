@@ -1,4 +1,4 @@
-# Master Thesis: What if the Greenland was green?
+# Master thesis: What if the Greenland was green?
 ### Exploring the climate feedbacks initiated by natural vegetation adaptation in the boral zone
 
 🚧 *It is a WIP project* 🚧
