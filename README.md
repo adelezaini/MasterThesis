@@ -11,7 +11,7 @@ The thesis work explores the response in the atmosphere-land interactions to an 
 - `data` folder contains the output data of simulations run in [NorESM2](https://github.com/NorESMhub/NorESM).
 - `notebook` folder contains the analysis scripts to process data.
 - `process-data` folder contains the output files and plots after the analysis.
-- `training` folder contains some data and scripts to learn and train how to analyse modelled data.
+- `training` folder contains some scripts to learn and train how to analyse modelled data - the data is not uploaded because it takes too much storage capacity.
 
 ## License
 
