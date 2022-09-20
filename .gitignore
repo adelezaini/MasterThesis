@@ -1,6 +1,7 @@
 .DS_Store
-training/data/
-*/*/data_out/
-*/data_out/
-training/NE1_50M_SR_W/
+training/data/*
+*/*/data_out/*
+*/data_out/*
+training/NE1_50M_SR_W/*
 */*/.ipynb_checkpoints/*
+data/*
