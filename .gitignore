@@ -3,5 +3,7 @@ training/data/*
 */*/data_out/*
 */data_out/*
 training/NE1_50M_SR_W/*
+*/__pycache__/
+*/.ipynb_checkpoints/*
 */*/.ipynb_checkpoints/*
 data/*
