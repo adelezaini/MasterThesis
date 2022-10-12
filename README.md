@@ -14,6 +14,11 @@ The thesis work explores the response in the atmosphere-land interactions to an 
 - `process-data` folder contains the output files and plots after the analysis.
 - `training` folder contains some scripts to learn and train how to analyse modelled data - the data is not uploaded because it takes too much storage capacity.
 
+## Contributing
+
+🚧 Any contribution is welcome! Please open [pull requests](https://github.com/adelezaini/master-thesis/pulls) or use the [issue tracker](https://github.com/adelezaini/master-thesis/issues) to report, comment and suggest.
+
+
 ## License
 
 📋 The code is released under the terms of the [MIT Licence](https://opensource.org/licenses/MIT). See the file [LICENSE.md](https://github.com/adelezaini/master-thesis/blob/master/LICENSE).
