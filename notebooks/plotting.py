@@ -24,13 +24,13 @@ from cartopy.util import add_cyclic_point
 from owslib.wms import WebMapService
 
 ################ Miscellaneous
-
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def dict_to_legend(dct):
     return ["{} – {}".format(item, amount) for item, amount in dct.items()]
 
 
-################ GridSpec: PlanteCaree Map with Lat_lon distributions
-
+################ GridSpec: PlanteCaree Map with Lat_lon distributions ################
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def map_lonlatdistribution(ds, lnd_frac, title, cbar_label=None, figsize=(10,6), cmap='Greens', color='g'):
     """
     Plot a map in PlateCaree projection with side Lat and Lon distribution.
@@ -93,8 +93,29 @@ def map_lonlatdistribution(ds, lnd_frac, title, cbar_label=None, figsize=(10,6),
     plt.show()
     
     
-################ Boreal PFTs plot
+################ Boreal PFTs plots ################
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=ccrs.PlateCarree(), cmap='Greens'):
+    """Analogous plot of da.plot(col='natpft'), but prettier (coastlines, proper colormap...)"""
+    npft=len(da.natpft.values)
+    p = da.plot(col='natpft', figsize=figsize, cmap=cmap,transform=ccrs.PlateCarree(), col_wrap=col_wrap, subplot_kws={"projection": proj}, add_colorbar=False)#, cbar_kwargs={'fraction': 0.1, 'pad':0})
 
+    for i, ax in enumerate(p.axes.flat):
+        ax_map_properties(ax, gridlines=False, rivers=False, borders=False)
+        ax.set_aspect('auto')
+        ax.set_extent([-180,180, boreal_lat,90], crs = ccrs.PlateCarree())
+        if not col_wrap:
+            ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
+        if proj== ccrs.PlateCarree():
+            ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=180])
+            ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
+
+    p.add_colorbar()
+    p.fig.suptitle(title, size=14)
+    p.fig.tight_layout()
+    plt.show()
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def plot_boreal_pfts(boreal_pfts):
     """ Ah hoc plotting for the 5 boreal PFTs.
         Args:
@@ -129,9 +150,24 @@ def plot_boreal_pfts(boreal_pfts):
     plt.suptitle("Boreal PFTs", size=20, y = 0.95, fontweight = 'bold')
     plt.show()
 
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def basic_line_plot(ds, title, alpha=None, legend = {15:'15 - Boreal trees', 11:'11 - Boreal schrubs', 12:'12 - arctic C3 grass'}):
+    """Simple line plot for lat/lon distribution of different natpft together"""
+    
+    if alpha==None:
+        alpha=np.ones(len(ds.natpft.values))
 
-################ Projections
+    fig =plt.figure(figsize=[7,3]); i=0;
+    for n in ds.natpft.values:
+        ds.sel(natpft=n).plot(label=legend[n], alpha=alpha[i]); i=i+1
 
+    plt.legend()
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
+
+################ Projections ################
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def ax_map_properties(ax, alpha=0.3, coastlines=True, gridlines=True, earth = False, ocean=True, land=True, borders=True, rivers=True, provinces=False):
     """Set default map properties on the axis"""
     if coastlines: ax.coastlines()
@@ -142,6 +178,7 @@ def ax_map_properties(ax, alpha=0.3, coastlines=True, gridlines=True, earth = Fa
     if rivers: ax.add_feature(cfeature.RIVERS)
     if earth: ax.stock_img()
 
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def cut_extent_Orthographic(ax, lat=None, extent=None):
     """Return circle where to cut the circular plot, given the latitude"""
     if extent:
@@ -158,8 +195,9 @@ def cut_extent_Orthographic(ax, lat=None, extent=None):
     circle = mpath.Path(verts * radius + center)
     ax.set_boundary(circle, transform=ax.transAxes)
     
-################ Dominant vegetation plot
-
+    
+################ Dominant vegetation plot ################
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def dominant_vegetation(veg_ds):
     """
     Create DataArray with .values() as the corresponding dominant PFTs number
@@ -189,6 +227,7 @@ def dominant_vegetation(veg_ds):
         dominant_veg = dominant_veg.drop('natpft').rename('PFTs')
     return dominant_veg
 
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def discrete_mapping_elements(col_dict, labels):
     """Return colormap, normalizer, format and ticks for colorbar in order to plot a discrete map
         Args:
@@ -208,6 +247,7 @@ def discrete_mapping_elements(col_dict, labels):
     tickz = norm_bins[:-1] + diff / 2
     return cm, norm, fmt, tickz
 
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def plot_dominant_vegetation(da_pfts, title, col_dict, labels, projection = ccrs.PlateCarree(), extent=None, figsize=[12,8], alpha=0.8):
     """ Plot dominant vegetation on the base on dominant PFT percentage.
         Args:
@@ -250,3 +290,5 @@ def plot_dominant_vegetation(da_pfts, title, col_dict, labels, projection = ccrs
         plt.title(title, y=1.15, size='xx-large', weight='bold')
         plt.tight_layout()
     plt.show()
+
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
