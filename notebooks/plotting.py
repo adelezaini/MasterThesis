@@ -111,7 +111,7 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
             ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
 
     p.add_colorbar()
-    p.fig.suptitle(title, size=14)
+    p.fig.suptitle(title, size=max(figsize)) if figsize else p.fig.suptitle(title)
     p.fig.tight_layout()
     plt.show()
     
@@ -151,20 +151,56 @@ def plot_boreal_pfts(boreal_pfts):
     plt.show()
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def basic_line_plot(ds, title, alpha=None, legend = {15:'15 - Boreal trees', 11:'11 - Boreal schrubs', 12:'12 - arctic C3 grass'}):
+def basic_line_plot(ds, title, alpha=None, colors=None, legend = {15:'15 - Boreal trees', 11:'11 - Boreal schrubs', 12:'12 - arctic C3 grass'}, ytick_perc=True):
     """Simple line plot for lat/lon distribution of different natpft together"""
     
-    if alpha==None:
-        alpha=np.ones(len(ds.natpft.values))
+    if not alpha: alpha=np.ones(len(ds.natpft.values))
 
-    fig =plt.figure(figsize=[7,3]); i=0;
-    for n in ds.natpft.values:
-        ds.sel(natpft=n).plot(label=legend[n], alpha=alpha[i]); i=i+1
+    fig, ax = plt.subplots(figsize=[7,3])
+    for i, n in enumerate(ds.natpft.values):
+        if not colors:
+            ds.sel(natpft=n).plot(ax=ax, label=legend[n], alpha=alpha[i])
+        else:
+            ds.sel(natpft=n).plot(ax=ax, label=legend[n], alpha=alpha[i], color=colors[i])
 
+    if ytick_perc:
+        ax.set_yticklabels(['{0:g}%'.format(x) for x in ax.get_yticks()])
+    ax.set_xlim(40,90)
     plt.legend()
     plt.title(title)
     plt.tight_layout()
     plt.show()
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def plot_individual_cumulative(ds_x, ds_y, col, title=None, legend=None, figname=None):
+    """Distribution plots – 1. individual curves 2. cumulative contribution"""
+    
+    figsize=(13, 5)
+    fig, axes = plt.subplots(1,2,figsize=figsize)
+    series = ds_y.to_series().unstack() #series.plot.bar(ax=ax, stacked=True)
+    p=series.plot.area(ax=axes[0], stacked=False, title="Individual", color=col)
+    if legend:
+        axes[0].legend(legend, fancybox=True)
+    
+    if not legend:
+        Legend = axes[0].get_legend()
+        leg=[]; [leg.append(t.get_text()) for t in Legend.texts]
+
+    axes[1].stackplot(ds_x, ds_y.T, colors = col)
+    axes[1].legend(leg, title = Legend.get_title().get_text()) if not legend else axes[1].legend(legend, fancybox=True)
+    axes[1].set_title("Cumulative")
+
+    for b, ax in enumerate(axes.flat):
+        vals = ax.get_yticks()
+        ax.set_yticklabels(['{0:g}%'.format(x) for x in vals])
+        ax.set_xlim(40,90)
+
+    plt.suptitle(title, size=max(figsize))
+
+    plt.tight_layout()
+    if figname: plt.savefig(figname)
+    plt.show()
+    
 
 ################ Projections ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -279,10 +315,11 @@ def plot_dominant_vegetation(da_pfts, title, col_dict, labels, projection = ccrs
 
     p= dominant_boreal.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cm, norm=norm, transform=ccrs.PlateCarree(),
                                     add_colorbar=False)
-    cb = fig.colorbar(p, ax=[ax], format=fmt, ticks=tickz, location = 'top', shrink=1/15*len(da_pfts.natpft.values), aspect=len(da_pfts.natpft.values)*3)
+    cb = fig.colorbar(p, ax=[ax], format=fmt, ticks=tickz, location = 'top', shrink=1/15*len(da_pfts.natpft.values), aspect=len(da_pfts.natpft.values)*4)
 
     ax_map_properties(ax, alpha=alpha)
     ax.gridlines(draw_labels=True)
+    ax.set_aspect('auto')
 
     if projection == ccrs.PlateCarree():
         plt.title(title, y=1.25, size='xx-large', weight='bold')
