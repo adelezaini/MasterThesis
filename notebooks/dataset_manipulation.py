@@ -22,9 +22,21 @@ def convert360_180(ds):
         _ds.lon.attrs['valid_max'] = 180.0
         _ds.lon.attrs['valid_min'] = -180.0
     return _ds
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def convert180_360(ds):
+    """Convert the longitude of the given xr:Dataset from [-180-180] to [0-360] deg"""
+    _ds = ds.copy()
+    if np.min(_ds['lon'].values) <= 0: # check if already
+        attrs = _ds['lon'].attrs
+        _ds.coords['lon'] = _ds.coords['lon'] % 360
+        _ds = _ds.sortby(_ds.lon)
+        _ds['lon'].attrs = attrs
+        _ds.lon.attrs['valid_max'] = 0.0
+        _ds.lon.attrs['valid_min'] = 360.0
+    return _ds
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def convert_lscoord(ds):
+def convert_lsmcoord(ds):
     """ When default coordinate are in Land Surface coord.
     Convert them in lon-lat. """
     
@@ -34,6 +46,16 @@ def convert_lscoord(ds):
     _ds['lsmlon'] = _ds['LONGXY'].isel(lsmlat=0)
     #Rename coord
     _ds = _ds.rename({'lsmlat':'lat','lsmlon':'lon'})
+    return _ds
+    #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def convert_to_lsmcoord(ds):
+    """ Convert lon-lat into Land Surface Model coordinates. """
+    print("Allert convert_to_lsmcoord! Changing from coord to dim means loosing information and changing from values to indexes")
+    _ds = ds.copy()
+    _ds = _ds.rename({'lat':'lsmlat','lon':'lsmlon'})
+    #From coordinate to dimensions (as original)
+    _ds = _ds.drop_vars('lsmlat').drop_vars('lsmlon')
+
     return _ds
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
