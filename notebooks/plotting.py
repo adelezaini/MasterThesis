@@ -237,27 +237,27 @@ def cut_extent_Orthographic(ax, lat=None, extent=None):
 def dominant_vegetation(veg_ds):
     """
     Create DataArray with .values() as the corresponding dominant PFTs number
+    Args:
+      - pft_list: select the PFTs to consider among the all in the DataArray. Default: None, that means all PFTs in the DataArray
+      Each cell will evaluate the dominant PFT among the ones given in the DatArray. Given a larger number, it will show a different dominant veg
     """
     
-    pfts_list = list(veg_ds.natpft.values)
+    pft_list = list(veg_ds.natpft.values)
     # Start copying the first PFT, fill the array of respective PFT number and filter by lnd_frac
     dominant_veg = veg_ds.isel(natpft=0).copy()
-    dominant_veg[:] = pfts_list[0]
-    dominant_veg = dominant_veg.where(veg_ds.sel(natpft=pfts_list[0])>0.).drop('natpft')
-    #dominant_veg.plot(); plt.show()
+    dominant_veg[:] = pft_list[0]
+    dominant_veg = dominant_veg.where(veg_ds.isel(natpft=0)>0.).drop('natpft')
 
     # Building the dominant veg rappresentation:
     # find max PFT value in each grid cell and compare to each "layer" of PFT
     # -> if equal to the max, then substitute the PFT number with the new max PFT number
     pfts_max = veg_ds.max(dim='natpft')
-    pfts_max=pfts_max.where(pfts_max>0.)
-    #pfts_max.plot(); plt.show()
+    pfts_max=pfts_max.where(pfts_max>0.) #not to consider cell=0, that in the next step could cause misleading results
 
-    for p in range(len(pfts_list)):
-        pft_filter=veg_ds.sel(natpft=pfts_list[p]) == pfts_max
+    for pft_index in pft_list:
+        pft_filter=veg_ds.sel(natpft=pft_index) == pfts_max
         # pft_filter is a True-False array (where -lat/lon- is equal to max values)
-        pft_filter=pft_filter
-        dominant_veg = xr.where(pft_filter, pfts_list[p], dominant_veg)
+        dominant_veg = xr.where(pft_filter, pft_index, dominant_veg)
         # where True, PFT number. Otherwise keep dominant veg value
 
         dominant_veg = dominant_veg.drop('natpft').rename('PFTs')
@@ -268,7 +268,8 @@ def discrete_mapping_elements(col_dict, labels):
     """Return colormap, normalizer, format and ticks for colorbar in order to plot a discrete map
         Args:
             - col_dict (dictionary): dictionary with values as .keys() and respective color as .items()
-            - labels (list of strings): names relative to values"""
+            - labels (list of strings): names relative to values
+      Code taken from [...]"""
     # Create a colormap
     cm = ListedColormap([col_dict[x] for x in col_dict.keys()])
     # Normalizer:
@@ -284,20 +285,23 @@ def discrete_mapping_elements(col_dict, labels):
     return cm, norm, fmt, tickz
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_dominant_vegetation(da_pfts, title, col_dict, labels, projection = ccrs.PlateCarree(), extent=None, figsize=[12,8], alpha=0.8):
+def plot_dominant_vegetation(da_pfts, title, col_dict, labels, pft_list = None, projection = ccrs.PlateCarree(), extent=None, figsize=[12,8], alpha=0.8):
     """ Plot dominant vegetation on the base on dominant PFT percentage.
         Args:
             - da_pfts (DataArray): PFTs DataArray with dim (lon, lat, natpft)
             - title (string): title of the plot
             - col_dict (dict): keys are PFTs number (int) and values are color names (string)
             - labels (list of string): legend label - PFT names
+            - pft_list (list of pft indexes): PFTs to plot among the analysis over all of the PFTs. Each cell will evaluate the dominant PFT among the ones given in the DatArray. Default: None, that means all PFTs in the DataArray
             - projection (ccrs object): projection of the map. Default: ccrs.PlateCarree()
             - extent (list of float): list of coordinate to zoom on [lon_min, lon_max, lat_min, lat_max]. Default None.
             - alpha (float): opacity of land-ocean background
     """
     
+    if not pft_list: pft_list = list(da_pfts.natpft.values)
+    
     dominant_boreal = dominant_vegetation(da_pfts)
-    #dominant_boreal.plot(); plt.show()
+    dominant_boreal = xr.where(np.isin(dominant_boreal.values,pft_list), dominant_boreal, float("nan"))
 
     ############# Preparation for plotting:
     cm, norm, fmt, tickz = discrete_mapping_elements(col_dict, labels)
@@ -315,7 +319,7 @@ def plot_dominant_vegetation(da_pfts, title, col_dict, labels, projection = ccrs
 
     p= dominant_boreal.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cm, norm=norm, transform=ccrs.PlateCarree(),
                                     add_colorbar=False)
-    cb = fig.colorbar(p, ax=[ax], format=fmt, ticks=tickz, location = 'top', shrink=1/15*len(da_pfts.natpft.values), aspect=len(da_pfts.natpft.values)*4)
+    cb = fig.colorbar(p, ax=[ax], format=fmt, ticks=tickz, location = 'top', shrink=1/15*len(pft_list), aspect=len(pft_list)*4)
 
     ax_map_properties(ax, alpha=alpha)
     ax.gridlines(draw_labels=True)

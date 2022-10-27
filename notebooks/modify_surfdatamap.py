@@ -1,0 +1,95 @@
+###### This python file collects fuctions to modify PFT configuration, such as in surfdata_map file
+
+####### Import packages
+import numpy as np
+import xarray as xr; xr.set_options(display_style='html')
+
+
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def apply_replacement_perc(config_init, replecement_perc, lnd_frac):
+    """
+    Given a percentage of replacement, this function applies the percentage over the initial configuration.
+    The replacement is meant trees -> shrubs, shrubs -> grass. It can be expanded for grass-> bg.
+    This means that the replacement_perc should have 2 natpft instead of 3, as the initial configuration.
+    This first draft of func works on replacement_perc with 3 natpft to make it simple.
+    The function than ignores the replacement_perc.natpft[0].
+    In order to work properly the order of natpft is important: 3 natpfts in order trees-shrubs-grass
+        Args:
+            - config_init (DataArray - lon, lat, natpft): initial PFT configuration
+            - replecement_perc (DataArray - lon, lat, natpft): percentage of replecement, spanning over lat-lon.It needs to have same natpfts as config_init to work
+            - lnd_frac (DataArray): DataArray.LAND_FRAC, needed for filter some DataArray on the scheme lnd=0, nan=ocean
+    """
+    
+    # Evaluate the ammount to subtract to shrubs+grass and to add to trees+shrubs
+    diff = config_init * replecement_perc
+    # Apply the difference to shrubs and grass
+    d = config_init - diff
+    ## Remember to ignore the first one: tree_pft = d.natpft[0]
+    subtracted = d.where(d.natpft!= d.natpft[0], config_init.isel(natpft=0))
+    # Apply the sum to trees and shrubs
+    add = diff.roll(natpft=-1)
+    added = subtracted+add
+    added = added.where(added>0., 0.).where(lnd_frac>0.) #problem with negative 10^-5 values
+    config_edited = added.where(added.natpft!=added.natpft[-1], subtracted.isel(natpft=-1)) # ignore the last one
+    return config_edited
+
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def tree_aggregation(pfts, tree_indexes, tree_macro_index = 15, lnd_frac=xr.DataArray(None)):
+    """Transform a PFT DataArray into a new one with tree PFTs aggregated into one single 'macro PFT'
+        Return a DataArray with natpft index order [tree_indexes, other_indexes]. Change in adding index_order=list of indexes
+        Args:
+        - pfts (DataArray): original PFT DataArray
+        - tree_indexes (list): list of the 'natpft' indexes corresponding to the tree PFTs
+        - tree_macro_index (int): new 'macro PFT' index for the aggregated trees
+        - lnd_frac (DataArray, also array): the sample is da.LAND_FRAC. It is needed because in the operation of the
+        sum we loose the division 0=lnd vs nan=ocean.
+        Return:
+        - pfts_macro (DatArray): same as pfts but with (fewer and) different indexes, in the order [tree_macro_index, others]
+    """
+    ds = pfts.copy()
+    dt = pfts.sel(natpft=tree_indexes).sum('natpft')
+    if lnd_frac.any(): dt = dt.where(lnd_frac>0.)
+    else: dt = dt.where(ds.isel(natpft=0)>=0.)
+    dt = dt.assign_coords({"natpft":tree_macro_index}).expand_dims('natpft')
+    old_indexes = ds['natpft'].values
+    new_indexes = np.append(tree_macro_index, old_indexes[~np.isin(old_indexes,tree_indexes)])
+    pfts_macro = xr.concat((dt, ds), dim='natpft').sel(natpft=new_indexes)
+    pfts_macro = pfts_macro.assign_attrs(pfts.attrs)
+    pfts_macro['natpft']=pfts_macro['natpft'].assign_attrs(pfts['natpft'].attrs)
+    return pfts_macro
+
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def tree_separation(pft_macro, tree_lon_perc, prod_along_dim, tree_indexes = [2,3,8], tree_macro_index=15, index_order=None, attrs=None):
+    """Disaggregation method of the tree PFTs based on the longitude occurance percentage.
+        Return a DataArray with natpft index order [tree_indexes, other_indexes]. Change in adding index_order=list of indexes
+        Args:
+        - pfts_macro (DataArray): PFT DataArray with 'macro PFTs' (e.g. tree PFTs aggregated into one 'macro PFT')
+        - tree_lon_perc (DataArray): dim=['natpft, 'lon'] with the occurance percentage over longitude of the tree PFTs on the 'macro PFT'
+        - tree_indexes (list): list of the 'natpft' indexes corresponding to the tree PFTs
+        - tree_macro_index (int): new 'macro PFT' index for the aggregated trees
+        Return:
+        - pfts (DatArray): same as pfts but with indexes restored as previous aggregation, in the order [tree_indexes, others]
+    """
+
+    for t in tree_indexes:
+        if t == 2:
+            edited_trees = pft_macro.sel(natpft=tree_macro_index).assign_coords({"natpft":t}).expand_dims('natpft')
+        else:
+            et = pft_macro.sel(natpft=tree_macro_index).assign_coords({"natpft":t}).expand_dims('natpft')
+            edited_trees = xr.concat((edited_trees, et), dim='natpft')
+
+    edited_trees = prod_along_dim(edited_trees, tree_lon_perc, 'lon')
+
+    # Let's keep normalization as much as possible
+    a = pft_macro.sel(natpft=tree_macro_index)
+    b = edited_trees.sum('natpft')
+    errata_diff = a-b
+    # Add the difference to the first tree PFT
+    edited_trees = edited_trees.where(edited_trees.natpft != edited_trees.natpft[0],
+                                      edited_trees.isel(natpft=0)+errata_diff)
+    
+    # Merge with the rest of the DataArray (shrubs & grass)
+    if not index_order: old_indexes = pft_macro['natpft'].values; index_order = np.append(tree_indexes, old_indexes[~np.isin(old_indexes,tree_macro_index)])
+    pfts = xr.concat((edited_trees, pft_macro), dim='natpft').sel(natpft=index_order)
+    if attrs: pfts =pfts.assign_attrs(attrs)
+    return pfts

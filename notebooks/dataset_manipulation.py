@@ -36,6 +36,23 @@ def convert_lscoord(ds):
     _ds = _ds.rename({'lsmlat':'lat','lsmlon':'lon'})
     return _ds
     
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def xr_prod_along_dim(ds, weights, dim):
+    """
+    Product along a specific dimension. Particularly suitable for weighting
+    Edited code from https://www.reddit.com/r/learnpython/comments/g45f2u/multiplying_xarray_dataarrays/
+    """
+    
+    assert ds[dim].size == weights[dim].size
+
+    old_order = ds.dims
+    new_order = tuple(list(set(old_order) - set([dim])) + [dim])
+
+    ds_t = ds.transpose(*new_order)
+    ds_weighted = ds_t * weights
+    ds_weighted = ds_weighted.transpose(*old_order)
+
+    return ds_weighted
     
     
 ################ Fitting in Xarray
