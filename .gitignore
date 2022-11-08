@@ -1,10 +1,12 @@
 .DS_Store
 training/data/*
-*/*/data_out/*
-*/data_out/*
 training/NE1_50M_SR_W/*
 */__pycache__/
 */.ipynb_checkpoints/*
 */*/.ipynb_checkpoints/*
 data/*
+processed-data/IDEALIZED/*.nc
+processed-data/REALISTIC/*.nc
 */LPJ_GUESS/
+notebooks/LPJ-GUESS-data.ipynb
+to_do.md
