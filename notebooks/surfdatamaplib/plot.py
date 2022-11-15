@@ -31,7 +31,7 @@ def dict_to_legend(dct):
 
 ################ GridSpec: PlanteCaree Map with Lat_lon distributions ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def map_lonlatdistribution(ds, lnd_frac, title, cbar_label=None, figsize=(10,6), cmap='Greens', color='g'):
+def map_lonlatdistribution(ds, lnd_frac=None, title=None, cbar_label=None, figsize=(10,6), cmap='Greens', color='g'):
     """
     Plot a map in PlateCaree projection with side Lat and Lon distribution.
     Distribution evaluated over the mean, considering the input as a percentage.
@@ -46,7 +46,7 @@ def map_lonlatdistribution(ds, lnd_frac, title, cbar_label=None, figsize=(10,6),
         cbar_label = ds.long_name
         
     ds = ds.copy()
-    ds = ds.where(lnd_frac>0.)
+    if lnd_frac: ds = ds.where(lnd_frac>0.)
         
     fig = plt.figure(figsize=figsize)
     grid = plt.GridSpec(4, 4, hspace=0.2, wspace=0.2, right=0.85)

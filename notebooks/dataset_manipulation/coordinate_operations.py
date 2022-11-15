@@ -74,3 +74,23 @@ def xr_prod_along_dim(ds, weights, dim):
     ds_weighted = ds_weighted.transpose(*old_order)
 
     return ds_weighted
+  
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def filter_lonlat(df, lonlat):
+    """Filter lon-lat pair in df with the list in lonlat
+    Args:
+    - df (Pandas dataframe): dataframe to filter with first columns longitude and latitude
+    - lonlat (Pandas dataframe): dataframe with the longitude and latitude for filtering
+    Return:
+    - Filtered Pandas dataframe
+    """
+    
+    dflonlat = df.iloc[:,[0,1]]
+    
+    new_coords = pd.MultiIndex.from_frame(lonlat)
+    existing_coords = pd.MultiIndex.from_frame(dflonlat)
+    filter_coord = existing_coords.isin(new_coords)
+    
+    df_new=df.copy()
+    df_new.iloc[:,0] = df_new.iloc[:,0][filter_coord]
+    return df_new.dropna()
