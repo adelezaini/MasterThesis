@@ -30,18 +30,18 @@ def DataArray_from_LPJGUESS(filename, total = False, colnames=True, name=None):#
         Args:
         - filename (string): path to txt file where data is
         - total (bool): include total amounts. These files have the last three columns as 'Total', 'Natural_sum', 'Petland_sum'.
-        - colnames (bool): import 'pft' coord as pft indexes (False) or proper pft names (True) - aka name of the columns.
+        - colnames (bool): import 'natpft' coord as pft indexes (False) or proper pft names (True) - aka name of the columns.
         - name (string): how to name the DataArray.
         
         Return:
-        - DataArray, named 'name' with coords/dims=(pft, lat, lon).
+        - DataArray, named 'name' with coords/dims=(natpft, lat, lon).
         """
     df = dataframe_from_LPJGUESS(filename, total = total)
     if not colnames:
         pft_names = list(df.columns.values)
         df.columns = [i for i in range(len(pft_names))]
     #if not peatland:
-    da = xr.DataArray(df.values, coords={'lonlat':df.index,'pft':df.columns.values})
+    da = xr.DataArray(df.values, coords={'lonlat':df.index,'natpft':df.columns.values})
     #else:
         #print(df.iloc[:,0:19].columns.values)
         #da = xr.DataArray(df.values, coords={'lonlat':df.index,'natpft':df.iloc[:,0:19].columns.values, 'petpft':df.iloc[:,19:25].columns.values})
