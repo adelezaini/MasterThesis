@@ -2,17 +2,12 @@
 
 ####### Import packages
 import numpy as np
-import netCDF4 as nc
-import xarray as xr
-xr.set_options(display_style='html')
-import pandas as pd
-import os
+import xarray as xr; xr.set_options(display_style='html')
 from scipy.optimize import curve_fit
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import transforms
 from matplotlib.colors import ListedColormap
-from matplotlib.image import imread
 import matplotlib.path as mpath
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import proplot as pplt
@@ -31,7 +26,7 @@ def dict_to_legend(dct):
 
 ################ GridSpec: PlanteCaree Map with Lat_lon distributions ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def map_lonlatdistribution(ds, lnd_frac=None, title=None, cbar_label=None, figsize=(10,6), cmap='Greens', color='g'):
+def map_lonlatdistribution(ds, lnd_frac=xr.DataArray(None), title=None, cbar_label=None, figsize=(10,6), cmap='Greens', color='g'):
     """
     Plot a map in PlateCaree projection with side Lat and Lon distribution.
     Distribution evaluated over the mean, considering the input as a percentage.
@@ -46,7 +41,7 @@ def map_lonlatdistribution(ds, lnd_frac=None, title=None, cbar_label=None, figsi
         cbar_label = ds.long_name
         
     ds = ds.copy()
-    if lnd_frac: ds = ds.where(lnd_frac>0.)
+    if lnd_frac.any(): ds = ds.where(lnd_frac>0.)
         
     fig = plt.figure(figsize=figsize)
     grid = plt.GridSpec(4, 4, hspace=0.2, wspace=0.2, right=0.85)
