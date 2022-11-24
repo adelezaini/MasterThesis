@@ -2,9 +2,11 @@
 
 ####### Import packages
 import numpy as np
+import math
+from textwrap import wrap
 import xarray as xr; xr.set_options(display_style='html')
 from scipy.optimize import curve_fit
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import transforms
 from matplotlib.colors import ListedColormap
@@ -111,8 +113,8 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_boreal_pfts(boreal_pfts):
-    """ Ah hoc plotting for the 5 boreal PFTs.
+def plot_boreal_pfts_CLM(boreal_pfts):
+    """ Ah hoc plotting for the 5 boreal PFTs of CLM.
         Args:
         - boreal_pfts (DataArray): (lat, lon, natpft) with natpft = '2 - BoNET','3 - BoNDT','8 - BoBDT', '11 - BoBDS','12 - artic C3 grass'
     """
@@ -143,6 +145,68 @@ def plot_boreal_pfts(boreal_pfts):
     cbar.ax.set_title(boreal_pfts.long_name, size = 14 )
 
     plt.suptitle("Boreal PFTs", size=20, y = 0.95, fontweight = 'bold')
+    plt.show()
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=None, vmin=0, vmax=1, auto_aspect=False, cbar_label=None):
+    """ Orthographic projection plot of boreal PFTs.
+        Args:
+        - boreal_pfts (DataArray): DataArray of the boreal pfts with (lat, lon, natpft) as coordinates
+        - figsize (list/tuple): set figure size of the plot - useful to adjust when pft total number changes
+        - col_wrap (int): number of subplots in each row
+        - title (string): title of the plot. If None, boreal_pfts.name will set as title
+        - titles (list of string): titles for the subplots - meant to give proper names to the pfts (ex: boreal needleaf deciduous tree)
+        - vmin, vmax (float): range for the colorbar
+        - auto_aspect (bool): set automatically aspect ratio in each subplot
+        - cbar_label (string): set colorbar label, if None boreal_pfts.long_name is the label
+    """
+    
+    # If 'figsize' is not given: set it automatically considering the total number of PFTs
+    if not figsize:
+        h = math.ceil(len(boreal_pfts.natpft.values)/col_wrap)
+        figsize = [col_wrap*3.5, h*3.5]
+        
+    # If the number of PFTs fits a multiple of 'col_wrap', then xarray.DataArray.plot() will automatically add a side colorbar, rearranging the axes position and width ('add_colorbar=True')
+    # Else, we silence the automatic colorbar ('add_colorbar=False') to add an extra axis on the last available from the arrange of subplots
+    if len(boreal_pfts.natpft.values)%col_wrap:
+        add_colorbar=False
+    else:
+        add_colorbar=True
+
+    p=boreal_pfts.plot.pcolormesh(x='lon', y='lat', col='natpft', col_wrap=col_wrap,
+                                  cmap='Greens', transform=ccrs.PlateCarree(),
+                                  subplot_kws={'projection': ccrs.Orthographic(0, 90)},
+                                  add_colorbar=add_colorbar,figsize=figsize, vmin=vmin, vmax=vmax)
+
+
+    for i, ax in enumerate(p.axes.flat):
+        #cut_extent_Orthographic(ax, lat=40) # it doesn't work properly, check later
+        ax_map_properties(ax, borders=False, rivers=False)
+        if auto_aspect: ax.set_aspect('auto')
+        if titles and i<len(titles):
+            ax.set_title(titles[i])
+            
+            
+    #plt.tight_layout()
+    
+    # If automatic colorbar is silenced (see above), add colorbar in the last axis
+    if not add_colorbar:
+        #plt.subplots_adjust(bottom=0.1, top=0.9, left=0.1, right=0.9, wspace=0.1, hspace=0.1)
+        #Get last axis position
+        l,b,w,h = ax.get_position().bounds
+        #Create a rectangle for the colorbar (horizontal stripe, narrower than the total original axis size)
+        rect = [l,b+h*0.5,w,h*0.1]
+        cbar_ax = p.fig.add_axes(rect)
+        #Create a colormap within [vmin, vmax] in 'Greens'
+        cs=mpl.cm.ScalarMappable(mpl.colors.Normalize(vmin=vmin, vmax=vmax), cmap='Greens')#mpl.cm.get_cmap('Greens',10))
+        #Add colorbar and title
+        cbar=p.fig.colorbar(cs,cax=cbar_ax ,orientation='horizontal')
+        if cbar_label: cbar.set_label(cbar_label)
+        else: cbar.set_label("\n".join(wrap(boreal_pfts.long_name, 30))) #, size = 14 )
+        
+    #Set title
+    if title : plt.suptitle(title, size=15,y = 0.95, fontweight = 'bold')
+    else: plt.suptitle(boreal_pfts.name, size=15,y = 0.95, fontweight = 'bold')
     plt.show()
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -272,8 +336,8 @@ def discrete_mapping_elements(col_dict, labels):
     norm_bins = np.sort([*col_dict.keys()]) + 0.5
     norm_bins = np.insert(norm_bins, 0, np.min(norm_bins) - 1.0)
     ## Make normalizer and formatter
-    norm = matplotlib.colors.BoundaryNorm(norm_bins, len(labels), clip=True)
-    fmt = matplotlib.ticker.FuncFormatter(lambda x, pos: labels[norm(x)])
+    norm = mpl.colors.BoundaryNorm(norm_bins, len(labels), clip=True)
+    fmt = mpl.ticker.FuncFormatter(lambda x, pos: labels[norm(x)])
     # Create ticks to have equidistance between ticks
     diff = norm_bins[1:] - norm_bins[:-1]
     tickz = norm_bins[:-1] + diff / 2

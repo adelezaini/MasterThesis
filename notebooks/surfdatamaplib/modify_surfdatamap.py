@@ -93,3 +93,27 @@ def tree_separation(pft_macro, tree_lon_perc, prod_along_dim, tree_indexes = [2,
     pfts = xr.concat((edited_trees, pft_macro), dim='natpft').sel(natpft=index_order)
     if attrs: pfts =pfts.assign_attrs(attrs)
     return pfts
+
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def surfdatamap_modification(original_ds, pfts_tot, edited_pfts):
+    """Apply the edited PFT configuration to the original surface data map
+    Args:
+    - original_ds (Dataset): original surface data map with all data varables and
+    original coordinate sistem (lsmcoord)
+    - pfts_tot (DataArray): data variable PCT_NAT_PFT of original_ds with coordinate convertion
+    (lsmcoord -> lon/lat, 0-360 -> -180-180)
+    - edited_pfts (DataArray): sub-DataArray of pfts_tot with just the edited (lat,lon, natpft)
+    
+    Return:
+    - edited_ds (Dataset): same as original_ds, but with edited
+    """
+    # Add modification to original PFT lon-lat range
+    edited_config = pfts_tot.copy(deep=True)
+    edited_config.loc[dict(lat=edited_pfts.lat, lon=edited_pfts.lon, natpft=edited_pfts.natpft)] = edited_pfts
+    # Convert to orginal format
+    ep = convert180_360(edited_config)
+    ep = convert_to_lsmcoord(ep.fillna(0.))
+    # Apply the change
+    edited_ds = original_ds.copy(deep=True)
+    edited_ds.PCT_NAT_PFT.loc[dict(lsmlat=ep.lsmlat, lsmlon=ep.lsmlon, natpft=ep.natpft)] = ep
+    return edited_ds
