@@ -10,4 +10,5 @@ processed-data/IDEALIZED/*.nc
 processed-data/REALISTIC/*.nc
 */LPJ_GUESS/
 notebooks/LPJ-GUESS-data.ipynb
+.ipynb_checkpoints/
 to_do.md
