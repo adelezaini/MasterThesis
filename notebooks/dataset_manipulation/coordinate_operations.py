@@ -57,6 +57,21 @@ def convert_to_lsmcoord(ds):
 
     return _ds
     
+   #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def match_coord(original_coord_da, coord_to_match_da, method='linear'):
+    """Return DataArray with matching coordinates (lon/lat) with another given DataArray.
+    The method used is the interp() of xarray. Different options of interpolation are available.
+    Args:
+    - original_coord_da (DataArray): variable with coordinates to be matched
+    - coord_to_match_da (DataArray): variable with coordinates to match
+    - method ({"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"},
+    default: "linear"): the method used to interpolate.
+    """
+    #new_da = original_coord_da.copy()
+    new_da = original_coord_da.interp(lat=coord_to_match_da['lat'], method = method)
+    new_da = new_da.interp(lon=coord_to_match_da['lon'], method = method)
+    return new_da
+    
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def xr_prod_along_dim(ds, weights, dim):
     """

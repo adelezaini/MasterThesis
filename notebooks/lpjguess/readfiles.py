@@ -24,7 +24,7 @@ def dataframe_from_LPJGUESS(filename, total = False):
     return df
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def DataArray_from_LPJGUESS(filename, total = False, colnames=True, name=None, da_attrs=xr.DataArray(None)):#, peatland=False):
+def DataArray_from_LPJGUESS(filename, total = False, colnames=True, name=None, da_attrs=xr.DataArray(None), main_attrs = None):#, peatland=False):
     """Import data as xarray DataArray from LPJGUESS .txt file,
     Columns are [Lat, Lon, [16 NAT PFTs], [7 PETLAND PFTs], Total, Natural_sum, Petland_sum]
         Args:
@@ -55,6 +55,7 @@ def DataArray_from_LPJGUESS(filename, total = False, colnames=True, name=None, d
       da['natpft'] = da['natpft'].assign_attrs(da_attrs['natpft'].attrs)
       # If column names is True, the units [='index'] is deleted from the attributes
       if colnames: del da['natpft'].attrs['units']
+    if main_attrs: da = da.assign_attrs(main_attrs)
       
     return da
 

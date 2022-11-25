@@ -113,6 +113,27 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def single_pft_map(da, title, figsize = [10,8], boreal_lat = None, projection=ccrs.Orthographic(0, 90), cmap='Greens', vmax = 100):
+    """Plot for a single PFT"""
+    fig = plt.figure(1, figsize=figsize)#,dpi=100)
+    ax = plt.axes(projection=projection)
+
+    # Zoom on the map according to boreal_lat
+    # Opposite of ax.set_global()
+    if boreal_lat: cut_extent_Orthographic(ax, boreal_lat)
+
+    p = da.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cmap, vmax=vmax,transform=ccrs.PlateCarree(),
+                                        add_colorbar=False)
+    cbar = plt.colorbar(p,ax = [ax], location = 'top', shrink=0.6, aspect=40, label='PTF on the natveg landunit [% of landunit]')
+
+
+    # Costum axis features
+    ax_map_properties(ax, earth=True)
+    if projection==ccrs.PlateCarree(): ax.set_aspect('auto')
+    ax.set_title(title,y=1.2,size='x-large', weight='bold')
+
+    plt.show()
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def plot_boreal_pfts_CLM(boreal_pfts):
     """ Ah hoc plotting for the 5 boreal PFTs of CLM.
         Args:
