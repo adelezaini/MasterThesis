@@ -19,6 +19,7 @@ import cartopy.feature as cfeature
 import cartopy.mpl.ticker as cticker
 from cartopy.util import add_cyclic_point
 from owslib.wms import WebMapService
+import warnings; warnings.filterwarnings('ignore')
 
 ################ Miscellaneous
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -99,11 +100,11 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
 
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, gridlines=False, rivers=False, borders=False)
-        ax.set_aspect('auto')
         ax.set_extent([-180,180, boreal_lat,90], crs = ccrs.PlateCarree())
         if not col_wrap:
             ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
         if proj== ccrs.PlateCarree():
+            ax.set_aspect('auto')
             ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=180])
             ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
 
@@ -113,7 +114,7 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def single_pft_map(da, title, figsize = [10,8], boreal_lat = None, projection=ccrs.Orthographic(0, 90), cmap='Greens', vmax = 100):
+def single_pft_map(da, title, figsize = [10,8], boreal_lat = None, projection=ccrs.Orthographic(0, 90), cmap='Greens', vmax = None, grid=True, earth=False):
     """Plot for a single PFT"""
     fig = plt.figure(1, figsize=figsize)#,dpi=100)
     ax = plt.axes(projection=projection)
@@ -124,11 +125,11 @@ def single_pft_map(da, title, figsize = [10,8], boreal_lat = None, projection=cc
 
     p = da.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cmap, vmax=vmax,transform=ccrs.PlateCarree(),
                                         add_colorbar=False)
-    cbar = plt.colorbar(p,ax = [ax], location = 'top', shrink=0.6, aspect=40, label='PTF on the natveg landunit [% of landunit]')
+    cbar = plt.colorbar(p,ax = [ax], location = 'top', shrink=0.6, aspect=40, label=da.long_name)#'PTF on the natveg landunit [% of landunit]')
 
 
     # Costum axis features
-    ax_map_properties(ax, earth=True)
+    ax_map_properties(ax, gridlines=grid, earth=earth)
     if projection==ccrs.PlateCarree(): ax.set_aspect('auto')
     ax.set_title(title,y=1.2,size='x-large', weight='bold')
 
@@ -169,7 +170,7 @@ def plot_boreal_pfts_CLM(boreal_pfts):
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=None, vmin=0, vmax=1, auto_aspect=False, cbar_label=None):
+def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=None, cmap='Greens', vmin=0, vmax=1, auto_aspect=False, cbar_label=None, extra_cbar_axis=False, lat=None):
     """ Orthographic projection plot of boreal PFTs.
         Args:
         - boreal_pfts (DataArray): DataArray of the boreal pfts with (lat, lon, natpft) as coordinates
@@ -180,6 +181,7 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
         - vmin, vmax (float): range for the colorbar
         - auto_aspect (bool): set automatically aspect ratio in each subplot
         - cbar_label (string): set colorbar label, if None boreal_pfts.long_name is the label
+        - lat (float): latitude at which to cut the plot in ax.extent()
     """
     
     # If 'figsize' is not given: set it automatically considering the total number of PFTs
@@ -187,39 +189,54 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
         h = math.ceil(len(boreal_pfts.natpft.values)/col_wrap)
         figsize = [col_wrap*3.5, h*3.5]
         
+    # Just for a nicer plot: extra_cbar_axis=True move the (eventual) big colorbar from the side to an extra axis
     # If the number of PFTs fits a multiple of 'col_wrap', then xarray.DataArray.plot() will automatically add a side colorbar, rearranging the axes position and width ('add_colorbar=True')
     # Else, we silence the automatic colorbar ('add_colorbar=False') to add an extra axis on the last available from the arrange of subplots
-    if len(boreal_pfts.natpft.values)%col_wrap:
+    if extra_cbar_axis or len(boreal_pfts.natpft.values)%col_wrap:
         add_colorbar=False
     else:
         add_colorbar=True
 
-    p=boreal_pfts.plot.pcolormesh(x='lon', y='lat', col='natpft', col_wrap=col_wrap,
-                                  cmap='Greens', transform=ccrs.PlateCarree(),
+    p = boreal_pfts.plot.pcolormesh(x='lon', y='lat', col='natpft', col_wrap=col_wrap,
+                                  cmap=cmap, transform=ccrs.PlateCarree(),
                                   subplot_kws={'projection': ccrs.Orthographic(0, 90)},
-                                  add_colorbar=add_colorbar,figsize=figsize, vmin=vmin, vmax=vmax)
-
+                                  add_colorbar=add_colorbar,figsize=figsize, vmin=vmin,
+                                  vmax=vmax)
 
     for i, ax in enumerate(p.axes.flat):
-        #cut_extent_Orthographic(ax, lat=40) # it doesn't work properly, check later
         ax_map_properties(ax, borders=False, rivers=False)
         if auto_aspect: ax.set_aspect('auto')
+        if lat:
+            #cut_extent_Orthographic(ax, lat=lat) # it doesn't work with FacedGrid: https://github.com/pydata/xarray/issues/4137
+            ax.set_extent([-180,180, lat,90], crs = ccrs.PlateCarree())
         if titles and i<len(titles):
             ax.set_title(titles[i])
-            
-            
-    #plt.tight_layout()
-    
+
     # If automatic colorbar is silenced (see above), add colorbar in the last axis
     if not add_colorbar:
+        # If there is no "last axis", add an extra one
+        if extra_cbar_axis:
+            nrows = int(len(boreal_pfts.natpft.values)/col_wrap) #number of rows in the subplots
+            n = len(p.fig.axes) #number of axis
+            # Change geometry to fit an extra line of axes
+            for i in range(n):
+                p.fig.axes[i].change_geometry(nrows+1, col_wrap, i+1)
+            # Add extra axis and remove all the "decorations" (facecolor, grid, axes, ...)
+            ax = p.fig.add_subplot(nrows+1, 1, nrows+1)
+            ax.remove() #ax.grid(False) #ax.set_facecolor('none')
+            # Adjust the figsize (height) with the new extra row of subplots
+            p.fig.set_figheight(figsize[1]/nrows*(nrows+1))
+            
         #plt.subplots_adjust(bottom=0.1, top=0.9, left=0.1, right=0.9, wspace=0.1, hspace=0.1)
         #Get last axis position
         l,b,w,h = ax.get_position().bounds
         #Create a rectangle for the colorbar (horizontal stripe, narrower than the total original axis size)
+          # if an extra row is added for the colorbar, shrink the axis containining the colorbar and center it
+        if extra_cbar_axis: sec = w/6.; w = sec*4.; l = l + sec
         rect = [l,b+h*0.5,w,h*0.1]
         cbar_ax = p.fig.add_axes(rect)
         #Create a colormap within [vmin, vmax] in 'Greens'
-        cs=mpl.cm.ScalarMappable(mpl.colors.Normalize(vmin=vmin, vmax=vmax), cmap='Greens')#mpl.cm.get_cmap('Greens',10))
+        cs=mpl.cm.ScalarMappable(mpl.colors.Normalize(vmin=vmin, vmax=vmax), cmap=cmap)#mpl.cm.get_cmap('Greens',10))
         #Add colorbar and title
         cbar=p.fig.colorbar(cs,cax=cbar_ax ,orientation='horizontal')
         if cbar_label: cbar.set_label(cbar_label)
@@ -228,6 +245,7 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
     #Set title
     if title : plt.suptitle(title, size=15,y = 0.95, fontweight = 'bold')
     else: plt.suptitle(boreal_pfts.name, size=15,y = 0.95, fontweight = 'bold')
+    plt.tight_layout()
     plt.show()
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -304,7 +322,6 @@ def cut_extent_Orthographic(ax, lat=None, extent=None):
     else:
         ax.set_extent([-180,180,-90,90], crs = ccrs.PlateCarree())
     # Compute a circle in axes coordinates, which we can use as a boundary for the map.
-    # We can pan/zoom as much as we like - the boundary will be permanently circular.
     theta = np.linspace(0, 2*np.pi, 100)
     center, radius = [0.5, 0.5], 0.5
     verts = np.vstack([np.sin(theta), np.cos(theta)]).T
