@@ -93,16 +93,17 @@ def map_lonlatdistribution(ds, lnd_frac=xr.DataArray(None), title=None, cbar_lab
     
 ################ Boreal PFTs plots ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=ccrs.PlateCarree(), cmap='Greens'):
+def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=ccrs.PlateCarree(), cmap='Greens', titles = None, norm=None, vmax = None):
     """Analogous plot of da.plot(col='natpft'), but prettier (coastlines, proper colormap...)"""
     npft=len(da.natpft.values)
-    p = da.plot(col='natpft', figsize=figsize, cmap=cmap,transform=ccrs.PlateCarree(), col_wrap=col_wrap, subplot_kws={"projection": proj}, add_colorbar=False)#, cbar_kwargs={'fraction': 0.1, 'pad':0})
+    p = da.plot(col='natpft', figsize=figsize, cmap=cmap, norm=norm, vmax=vmax, transform=ccrs.PlateCarree(), col_wrap=col_wrap, subplot_kws={"projection": proj}, add_colorbar=False)#, cbar_kwargs={'fraction': 0.1, 'pad':0})
 
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, gridlines=False, rivers=False, borders=False)
         ax.set_extent([-180,180, boreal_lat,90], crs = ccrs.PlateCarree())
-        if not col_wrap:
-            ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
+        if not col_wrap: ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
+        if titles and i<len(titles): ax.set_title(titles[i])
+            
         if proj== ccrs.PlateCarree():
             ax.set_aspect('auto')
             ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=180])
@@ -209,8 +210,7 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
         if lat:
             #cut_extent_Orthographic(ax, lat=lat) # it doesn't work with FacedGrid: https://github.com/pydata/xarray/issues/4137
             ax.set_extent([-180,180, lat,90], crs = ccrs.PlateCarree())
-        if titles and i<len(titles):
-            ax.set_title(titles[i])
+        if titles and i<len(titles): ax.set_title(titles[i])
 
     # If automatic colorbar is silenced (see above), add colorbar in the last axis
     if not add_colorbar:
