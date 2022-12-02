@@ -17,8 +17,9 @@ The thesis work explores the response in the atmosphere-land interactions to an 
 - `training`: some scripts to learn and train how to analyse modelled data
 - `img`: imported images
 
- *data is not uploaded on the GitHub repository for storage capacity
- **notebook analysising LPJGUESS data are not imported for confidential content
+ *\*data is not uploaded on the GitHub repository for storage capacity*
+ 
+ *\**notebooks analysising LPJGUESS data are not imported for confidential content*
 
 ## Contributing
 
