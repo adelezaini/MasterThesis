@@ -20,11 +20,25 @@ import cartopy.mpl.ticker as cticker
 from cartopy.util import add_cyclic_point
 from owslib.wms import WebMapService
 import warnings; warnings.filterwarnings('ignore')
+plt.rcParams['mathtext.fontset'] = 'stix'
+plt.rcParams['font.family'] = 'STIXGeneral'
+#'Ubuntu'#'Times New Roman'#'Source Sans Pro'#'Noto Sans'#'AppleMyungjo'#'STIXGeneral'
 
 ################ Miscellaneous
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def dict_to_legend(dct):
+    """Support function for legend display.
+      Convert a dict in the format {item1: amount1, item2:amount2...}
+      into a list of strings in the format ['item1 - amount1', 'item2 - amount2', ...]
+    """
     return ["{} – {}".format(item, amount) for item, amount in dct.items()]
+    
+def plot_title(title):
+    """Plot the give title. Useful if plotting multiple figures, gathered under a same main title."""
+    fig, ax = plt.subplots(1,1, figsize=(10, 0.5))
+    ax.axis('off')
+    plt.suptitle(title, weight='bold', size='xx-large', y=0.5)
+    plt.show()
 
 
 ################ GridSpec: PlanteCaree Map with Lat_lon distributions ################
@@ -93,14 +107,20 @@ def map_lonlatdistribution(ds, lnd_frac=xr.DataArray(None), title=None, cbar_lab
     
 ################ Boreal PFTs plots ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=ccrs.PlateCarree(), cmap='Greens', titles = None, norm=None, vmax = None):
+def basic_pft_map(da, title, extent_lat=40, figsize=None, proj=ccrs.PlateCarree(), col_wrap=3, cmap='Greens', contourf = False, titles = None, **kwargs):
     """Analogous plot of da.plot(col='natpft'), but prettier (coastlines, proper colormap...)"""
     npft=len(da.natpft.values)
-    p = da.plot(col='natpft', figsize=figsize, cmap=cmap, norm=norm, vmax=vmax, transform=ccrs.PlateCarree(), col_wrap=col_wrap, subplot_kws={"projection": proj}, add_colorbar=False)#, cbar_kwargs={'fraction': 0.1, 'pad':0})
+    
+    # Gather all the arguments of the plot
+    plot_args = dict(col='natpft', figsize=figsize, cmap=cmap, col_wrap=col_wrap, transform=ccrs.PlateCarree(), subplot_kws={"projection": proj}, add_colorbar=False, **kwargs)
+    
+    # If not plot.contourf -> plot.pcolormesh
+    if not contourf: p = da.plot(**plot_args) #pcolormesh
+    else: p = da.plot.contourf(**plot_args)
 
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, gridlines=False, rivers=False, borders=False)
-        ax.set_extent([-180,180, boreal_lat,90], crs = ccrs.PlateCarree())
+        ax.set_extent([-180,180, extent_lat,90], crs = ccrs.PlateCarree())
         if not col_wrap: ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
         if titles and i<len(titles): ax.set_title(titles[i])
             
@@ -115,28 +135,36 @@ def basic_pft_map(da, title, boreal_lat=40, col_wrap=None, figsize=None, proj=cc
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def single_pft_map(da, title, figsize = [10,8], boreal_lat = None, projection=ccrs.Orthographic(0, 90), cmap='Greens', vmax = None, grid=True, earth=False):
+def single_pft_map(da, title, figsize = [10,8], ax=None, extent_lat = None, projection=ccrs.Orthographic(0, 90),
+                   grid=True, earth=False, contourf=False, cmap='Greens', **kwargs):
     """Plot for a single PFT"""
-    fig = plt.figure(1, figsize=figsize)#,dpi=100)
-    ax = plt.axes(projection=projection)
+    
+    # Add axis if it not given - useful to plot multiple subplots in one figure
+    if not ax:
+        fig = plt.figure(1, figsize=figsize)#,dpi=100)
+        ax = plt.axes(projection=projection)
 
     # Zoom on the map according to boreal_lat
     # Opposite of ax.set_global()
-    if boreal_lat: cut_extent_Orthographic(ax, boreal_lat)
+    if extent_lat: cut_extent_Orthographic(ax, extent_lat)
 
-    p = da.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cmap, vmax=vmax,transform=ccrs.PlateCarree(),
-                                        add_colorbar=False)
+    # Gather all the arguments of the plot
+    plot_args = dict(ax=ax, x='lon', y='lat', cmap = cmap, transform=ccrs.PlateCarree(), add_colorbar=False, **kwargs)
+    
+    # If not plot.contourf -> plot.pcolormesh
+    if not contourf: p = da.plot(**plot_args) #pcolormesh
+    else: p = da.plot.contourf(**plot_args)
+        
+    # Add common colorbar
     cbar = plt.colorbar(p,ax = [ax], location = 'top', shrink=0.6, aspect=40, label=da.long_name)#'PTF on the natveg landunit [% of landunit]')
-
 
     # Costum axis features
     ax_map_properties(ax, gridlines=grid, earth=earth)
     if projection==ccrs.PlateCarree(): ax.set_aspect('auto')
     ax.set_title(title,y=1.2,size='x-large', weight='bold')
-
-    plt.show()
+    if not ax: plt.show()
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_boreal_pfts_CLM(boreal_pfts):
+def plot_boreal_pfts_CLM(boreal_pfts, contourf = True):
     """ Ah hoc plotting for the 5 boreal PFTs of CLM.
         Args:
         - boreal_pfts (DataArray): (lat, lon, natpft) with natpft = '2 - BoNET','3 - BoNDT','8 - BoBDT', '11 - BoBDS','12 - artic C3 grass'
@@ -144,11 +172,15 @@ def plot_boreal_pfts_CLM(boreal_pfts):
     
     titles=['2 - BoNET','3 - BoNDT','8 - BoBDT','11 - BoBDS','12 - artic C3 grass']
     #plt.tight_layout()
-    p=boreal_pfts.plot.contourf(x='lon', y='lat', col='natpft', col_wrap=2,
+    
+    # Gather all the arguments of the plot
+    plot_args = dict(x='lon', y='lat', col='natpft', col_wrap=2,
                                   cmap='Greens', transform=ccrs.PlateCarree(),
                                   subplot_kws={'projection': ccrs.Orthographic(0, 90)},
                                   add_colorbar=False,figsize=(15, 15), robust=False)
-
+    # If not plot.contourf -> plot.pcolormesh
+    if contourf: p = boreal_pfts.plot.contourf(**plot_args)
+    else: p = boreal_pfts.plot(**plot_args)
 
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, borders=False, rivers=False)
@@ -171,7 +203,7 @@ def plot_boreal_pfts_CLM(boreal_pfts):
     plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=None, cmap='Greens', vmin=0, vmax=1, auto_aspect=False, cbar_label=None, extra_cbar_axis=False, lat=None):
+def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=2, title=None, titles=None, cmap='Greens', auto_aspect=False, cbar_label=None, extra_cbar_axis=False, lat=None, contourf = False, robust=False, cbar_kwargs={}, **kwargs):
     """ Orthographic projection plot of boreal PFTs.
         Args:
         - boreal_pfts (DataArray): DataArray of the boreal pfts with (lat, lon, natpft) as coordinates
@@ -179,30 +211,56 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
         - col_wrap (int): number of subplots in each row
         - title (string): title of the plot. If None, boreal_pfts.name will set as title
         - titles (list of string): titles for the subplots - meant to give proper names to the pfts (ex: boreal needleaf deciduous tree)
-        - vmin, vmax (float): range for the colorbar
         - auto_aspect (bool): set automatically aspect ratio in each subplot
         - cbar_label (string): set colorbar label, if None boreal_pfts.long_name is the label
         - lat (float): latitude at which to cut the plot in ax.extent()
+        - vmin, vmax (float): range values for colormap
+        - contourf (bool): kind of plot
+        - robust (bool): argument to optimise the plot colours by clipping extreme values or outliers
+        - cbar_kwargs (dict): colorbar arguments (ex: shrink, aspect, orientation...)
+        - **kwargs (Any): keyword-arguments to pass to xr.DataArray.plot().
     """
     
+    rows = math.ceil(len(boreal_pfts.natpft.values)/col_wrap)
     # If 'figsize' is not given: set it automatically considering the total number of PFTs
-    if not figsize:
-        h = math.ceil(len(boreal_pfts.natpft.values)/col_wrap)
-        figsize = [col_wrap*3.5, h*3.5]
+    if not figsize: figsize = [col_wrap*3.5, rows*3.5]
+
         
     # Just for a nicer plot: extra_cbar_axis=True move the (eventual) big colorbar from the side to an extra axis
     # If the number of PFTs fits a multiple of 'col_wrap', then xarray.DataArray.plot() will automatically add a side colorbar, rearranging the axes position and width ('add_colorbar=True')
     # Else, we silence the automatic colorbar ('add_colorbar=False') to add an extra axis on the last available from the arrange of subplots
-    if extra_cbar_axis or len(boreal_pfts.natpft.values)%col_wrap:
+    if extra_cbar_axis or len(boreal_pfts.natpft.values)%col_wrap and not robust:
         add_colorbar=False
     else:
         add_colorbar=True
-
-    p = boreal_pfts.plot.pcolormesh(x='lon', y='lat', col='natpft', col_wrap=col_wrap,
-                                  cmap=cmap, transform=ccrs.PlateCarree(),
-                                  subplot_kws={'projection': ccrs.Orthographic(0, 90)},
-                                  add_colorbar=add_colorbar,figsize=figsize, vmin=vmin,
-                                  vmax=vmax)
+        
+    # Gather all the arguments of the plot
+    if not cbar_kwargs:
+        if rows<2: cbar_kwargs=dict(shrink=0.6)
+        else: cbar_kwargs=dict(orientation='horizontal', shrink=0.6)
+            
+    # If vmin and vmax are not assigned -> 'ceiling tens' are choosen for extremes (-91->-100, 84->100)
+    if not robust: # in contrast with robust
+        if not any(x=='vmin' for x in kwargs.keys()):
+            if boreal_pfts.min().values:
+                kwargs['vmin'] = 10**(math.ceil(math.log(abs(boreal_pfts.min().values), 10)))*np.sign(boreal_pfts.min().values)
+            else: #in case it's 0.
+                kwargs['vmin'] = boreal_pfts.min().values
+        if not any(x=='vmax' for x in kwargs.keys()):
+            if boreal_pfts.max().values:
+                kwargs['vmax'] = 10**(math.ceil(math.log(abs(boreal_pfts.max().values), 10)))*np.sign(boreal_pfts.max().values)
+            else: #in case it's 0.
+                kwargs['vmax'] = boreal_pfts.min().values
+            
+    plot_args = dict(x='lon', y='lat', col='natpft', col_wrap=col_wrap,
+                     cmap=cmap, transform=ccrs.PlateCarree(), robust=robust,
+                     subplot_kws={'projection': ccrs.Orthographic(0, 90)},
+                     add_colorbar=add_colorbar,figsize=figsize, **kwargs,
+                     cbar_kwargs=cbar_kwargs)
+    # If not plot.contourf -> plot.pcolormesh
+    if not contourf: p = boreal_pfts.plot.pcolormesh(**plot_args)
+    else: p = boreal_pfts.plot.contourf(**plot_args)
+        
 
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, borders=False, rivers=False)
@@ -233,10 +291,12 @@ def plot_boreal_pfts(boreal_pfts, figsize=None, col_wrap=3, title=None, titles=N
         #Create a rectangle for the colorbar (horizontal stripe, narrower than the total original axis size)
           # if an extra row is added for the colorbar, shrink the axis containining the colorbar and center it
         if extra_cbar_axis: sec = w/6.; w = sec*4.; l = l + sec
-        rect = [l,b+h*0.5,w,h*0.1]
+        rect = [l,b+h*0.5,w,h*0.05]
         cbar_ax = p.fig.add_axes(rect)
-        #Create a colormap within [vmin, vmax] in 'Greens'
-        cs=mpl.cm.ScalarMappable(mpl.colors.Normalize(vmin=vmin, vmax=vmax), cmap=cmap)#mpl.cm.get_cmap('Greens',10))
+        # Create a colormap within [vmin, vmax] in 'Greens'
+        # If levels: create colorbar with levels
+        if any(x=='levels' for x in kwargs.keys()): cmap = mpl.cm.get_cmap(cmap,kwargs['levels'])
+        cs=mpl.cm.ScalarMappable(mpl.colors.Normalize(vmin=kwargs['vmin'], vmax=kwargs['vmax']), cmap=cmap)
         #Add colorbar and title
         cbar=p.fig.colorbar(cs,cax=cbar_ax ,orientation='horizontal')
         if cbar_label: cbar.set_label(cbar_label)
@@ -305,7 +365,7 @@ def plot_individual_cumulative(ds_x, ds_y, col, title=None, legend=None, figname
 def ax_map_properties(ax, alpha=0.3, coastlines=True, gridlines=True, earth = False, ocean=True, land=True, borders=True, rivers=True, provinces=False):
     """Set default map properties on the axis"""
     if coastlines: ax.coastlines()
-    if gridlines: ax.gridlines()
+    if gridlines: ax.gridlines(alpha=0.3)
     if ocean: ax.add_feature(cartopy.feature.OCEAN, zorder=0, alpha=alpha)
     if land: ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', alpha=alpha)
     if borders: ax.add_feature(cfeature.BORDERS, alpha=0.3)
@@ -382,7 +442,7 @@ def discrete_mapping_elements(col_dict, labels):
     return cm, norm, fmt, tickz
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_dominant_vegetation(da_pfts, title, col_dict, labels, pft_list = None, projection = ccrs.PlateCarree(), extent=None, figsize=[12,8], alpha=0.8):
+def plot_dominant_vegetation(da_pfts, title, col_dict, labels, pft_list = None, projection = ccrs.PlateCarree(), extent=None, figsize=[12,8], alpha=0.8, contourf=False, **kwargs):
     """ Plot dominant vegetation on the base on dominant PFT percentage.
         Args:
             - da_pfts (DataArray): PFTs DataArray with dim (lon, lat, natpft)
@@ -393,6 +453,8 @@ def plot_dominant_vegetation(da_pfts, title, col_dict, labels, pft_list = None, 
             - projection (ccrs object): projection of the map. Default: ccrs.PlateCarree()
             - extent (list of float): list of coordinate to zoom on [lon_min, lon_max, lat_min, lat_max]. Default None.
             - alpha (float): opacity of land-ocean background
+            - contourf (bool): kind of plot
+            - **kwargs (Any): keyword-arguments to pass to xr.DataArray.plot().
     """
     
     if not pft_list: pft_list = list(da_pfts.natpft.values)
@@ -413,16 +475,20 @@ def plot_dominant_vegetation(da_pfts, title, col_dict, labels, pft_list = None, 
             ax.set_extent(extent, crs = ccrs.PlateCarree())
         else:
             cut_extent_Orthographic(ax, extent=extent)
-
-    p= dominant_boreal.plot.pcolormesh(ax=ax, x='lon', y='lat', cmap=cm, norm=norm, transform=ccrs.PlateCarree(),
-                                    add_colorbar=False)
+            
+    # Gather all the arguments of the plot
+    plot_args = dict(ax=ax, x='lon', y='lat', cmap=cm, norm=norm, transform=ccrs.PlateCarree(), add_colorbar=False, **kwargs)
+    # If not plot.contourf -> plot.pcolormesh
+    if not contourf: p = dominant_boreal.plot.pcolormesh(**plot_args)
+    else: p = dominant_boreal.plot.contourf(**plot_args)
+    
     cb = fig.colorbar(p, ax=[ax], format=fmt, ticks=tickz, location = 'top', shrink=1/15*len(pft_list), aspect=len(pft_list)*4)
 
     ax_map_properties(ax, alpha=alpha)
-    ax.gridlines(draw_labels=True)
-    ax.set_aspect('auto')
+    ax.gridlines(draw_labels=True, alpha=0.5)
 
     if projection == ccrs.PlateCarree():
+        ax.set_aspect('auto')
         plt.title(title, y=1.25, size='xx-large', weight='bold')
     else:
         plt.title(title, y=1.15, size='xx-large', weight='bold')

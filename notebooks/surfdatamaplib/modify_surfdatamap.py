@@ -3,7 +3,8 @@
 ####### Import packages
 import numpy as np
 import xarray as xr; xr.set_options(display_style='html')
-
+import sys; sys.path.append(".")
+from dataset_manipulation import *
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def apply_replacement_perc(config_init, replecement_perc, lnd_frac):
@@ -95,7 +96,7 @@ def tree_separation(pft_macro, tree_lon_perc, prod_along_dim, tree_indexes = [2,
     return pfts
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def surfdatamap_modification(original_ds, pfts_tot, edited_pfts):
+def surfdatamap_modification(original_ds, pfts_tot, edited_pfts, method = None):
     """Apply the edited PFT configuration to the original surface data map
     Args:
     - original_ds (Dataset): original surface data map with all data varables and
@@ -103,13 +104,29 @@ def surfdatamap_modification(original_ds, pfts_tot, edited_pfts):
     - pfts_tot (DataArray): data variable PCT_NAT_PFT of original_ds with coordinate convertion
     (lsmcoord -> lon/lat, 0-360 -> -180-180)
     - edited_pfts (DataArray): sub-DataArray of pfts_tot with just the edited (lat,lon, natpft)
+    - method (string): if 'irregular_area' suitable for irregular area of edited_pfts to substitute.
+    Otherwise, a basic approach replace a rectangular shape.
     
     Return:
     - edited_ds (Dataset): same as original_ds, but with edited
     """
     # Add modification to original PFT lon-lat range
     edited_config = pfts_tot.copy(deep=True)
-    edited_config.loc[dict(lat=edited_pfts.lat, lon=edited_pfts.lon, natpft=edited_pfts.natpft)] = edited_pfts
+    # Substitute area covered by non-NaN value of edited_pfts
+    if method == 'irregular_area':
+        # Idea: sum of 1. pfts_tot to which mask irreg. area covered by edited_pfts + 2. edited_pfts
+        edited_config = pfts_tot.where(edited_pfts.isnull()).fillna(0.)+edited_pfts.fillna(0.)
+    else: # Classical method: if area to substitute is rectangular
+        edited_config.loc[dict(lat=edited_pfts.lat, lon=edited_pfts.lon, natpft=edited_pfts.natpft)] = edited_pfts
+
+    """ Test: # first attempt, but way too slow and little elegant
+    for n in edited_pfts.natpft.values:
+        for lat in edited_pfts.lat.values:
+            for lon in edited_pfts.lon.values:
+                replacement_cell = edited_pfts.sel(natpft = n, lat = lat, lon = lon)
+                if replacement_cell.values>=0.:
+                    edited_config.loc[dict(lat=lat, lon=lon, natpft = n)] = replacement_cell
+    """
     # Convert to orginal format
     ep = convert180_360(edited_config)
     ep = convert_to_lsmcoord(ep.fillna(0.))

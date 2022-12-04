@@ -3,11 +3,18 @@
 ####### Import packages
 import numpy as np
 import netCDF4 as nc
-import xarray as xr; xr.set_options(display_style='html')
+import xarray as xr; xr.set_options(display_style='html', keep_attrs=True)
 import pandas as pd
 import os
 
-
+################ Miscellaneous
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def check_da_equal(da1, da2):
+    p = da1-da2
+    check = p.where(p!=0.,drop=True).squeeze()
+    if not len(check.values): print("The DataArrays are equal")
+    else: print("The DataArrays are different. Check NaN values")
+    
 ################ Operations over coordinates
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def convert360_180(ds):
@@ -57,7 +64,33 @@ def convert_to_lsmcoord(ds):
 
     return _ds
     
-   #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def convert_landunit_to_gridcell(da_lndunit, lnd_frac, attrs={}):
+    """Covert Data variable from being over the landunit to be renormalized over the whole gridcell.
+    Args:
+    - da_lndunit (DataArray): variable evaluated over the landunit
+    - lnd_frac (DataArray): land fraction - fraction of land in the gridcell. Same lonxlat dimensions as da_lndunit
+    - attrs (dict): dictionary gathering attributes. Needed if the previous attributes mentioned the normalization. Optional.
+    """
+    xr.set_options(keep_attrs=True)
+    da_gridcell = da_lndunit * lnd_frac
+    if attrs: da_gridcell = da_gridcell.assign_attrs(attrs)
+    return da_gridcell
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def convert_gridcell_to_landunit(da_gridcell, lnd_frac, attrs={}):
+    """Covert Data variable from being over the gridcell to be renormalized over the landunit.
+    Args:
+    - da_gridcell (DataArray): variable evaluated over the gridcell
+    - lnd_frac (DataArray): land fraction - fraction of land in the gridcell. Same lonxlat dimensions as da_gridcell
+    - attrs (dict): dictionary gathering attributes. Needed if the previous attributes mentioned the normalization. Optional.
+    """
+    xr.set_options(keep_attrs=True)
+    da_lndunit = da_gridcell/lnd_frac
+    if attrs: da_lndunit = da_lndunit.assign_attrs(attrs)
+    return da_lndunit
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def match_coord(original_coord_da, coord_to_match_da, method='linear'):
     """Return DataArray with matching coordinates (lon/lat) with another given DataArray.
     The method used is the interp() of xarray. Different options of interpolation are available.
@@ -67,8 +100,8 @@ def match_coord(original_coord_da, coord_to_match_da, method='linear'):
     - method ({"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"},
     default: "linear"): the method used to interpolate.
     """
-    #new_da = original_coord_da.copy()
-    new_da = original_coord_da.interp(lat=coord_to_match_da['lat'], method = method)
+    new_da = original_coord_da.copy()
+    new_da = new_da.interp(lat=coord_to_match_da['lat'], method = method)
     new_da = new_da.interp(lon=coord_to_match_da['lon'], method = method)
     return new_da
     
