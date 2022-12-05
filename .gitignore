@@ -1,14 +1,21 @@
-.DS_Store
+# Data to save storage
+data/*
 training/data/*
 training/NE1_50M_SR_W/*
-*/__pycache__/
-*/*/__pycache__/
-*/.ipynb_checkpoints/*
-*/*/.ipynb_checkpoints/*
-data/*
 processed-data/IDEALIZED/*.nc
 processed-data/REALISTIC/*.nc
+
+# Confidential content
 */LPJ_GUESS/
 notebooks/LPJ-GUESS-*.ipynb
+notebooks/Modify-input-surfdata-map_REALISTIC.ipynb
+
+# Backup files
+.DS_Store
+*/__pycache__/
+*/*/__pycache__/
 .ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+*/*/.ipynb_checkpoints/*
+
 to_do.md
