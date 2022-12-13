@@ -10,16 +10,18 @@ The thesis work explores the response in the atmosphere-land interactions to an 
 
 ## Repo organisation
 - `noresm-scripts`: scripts to run cases in [NorESM2](https://github.com/NorESMhub/NorESM) following the `Simulation_plan.docx`.
-- `data`*: output data of simulations run in [NorESM2](https://github.com/NorESMhub/NorESM) , ready to be analysed
-- `notebooks`** : jupyter notebooks and .py files to analyse and process data
-- `processed-data`*: output files after the analysis
+- `data`*: output data of simulations run in [NorESM2](https://github.com/NorESMhub/NorESM), ready to be analysed
+- `notebooks`** : jupyter notebooks and .py files to analyse and process input and output data
+- `processed-data`*: output files after some analysis
 - `figures`: output figures
-- `training`: some scripts to learn and train how to analyse modelled data
+- `training`: some scripts to learn and train how to analyse model data
 - `img`: imported images
 
  *\*data is not uploaded on the GitHub repository for storage capacity*
  
  *\**notebooks analysising LPJGUESS data are not imported for confidential content*
+
+ <img align="center" width="500" src="./img/github_workflow.png">
 
 ## Contributing
 
