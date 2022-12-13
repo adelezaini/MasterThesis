@@ -2,8 +2,7 @@
 data/*
 training/data/*
 training/NE1_50M_SR_W/*
-processed-data/IDEALIZED/*.nc
-processed-data/REALISTIC/*.nc
+processed-data/*/*/*.nc
 
 # Confidential content
 */LPJ_GUESS/

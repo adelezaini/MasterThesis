@@ -7,22 +7,22 @@ from dataset_manipulation import fix_cam_time
 
 """
 Example usage:
-python postprocess.py casename h2
+python postprocess.py casename casealias h2
 """
 
-raw_path = '/cluster/home/adelez/nird/archive/'
-processed_path = '/cluster/home/adelez/master-thesis/processed-data/'
+raw_path = '../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
+processed_path = '../processed-data/'
 
-def main(casename, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
+def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
          
     fp = raw_path+casename+'/atm/hist/'+casename+'.cam.'+history_field+'.*.nc'
 
     all_files = glob.glob(fp)
     all_files.sort()
-    print("Files found")
+    print('Files found')
 
     ds = xr.open_mfdataset(all_files)
-    print("Dataset created")
+    print('Dataset created')
 
     #-----------------------------
     # Postprocessing of model data
@@ -34,29 +34,29 @@ def main(casename, history_field='h0'):#, startyear, endyear, var,history_field=
     # Remove spinup months of data set
     ds = ds.isel(time=slice(12,len(ds.time)))
 
-    print("Postprocessing completed")
+    print('Postprocessing completed')
 
     #--------------------------------------------------------------------
     # Store relevant variables intermediately to save time when plotting,
     # change to desired units and create combined variables
     #--------------------------------------------------------------------
-    date = "2008_2012"
+    date = '20082012'
 
     # BVOC variables
     variables = ['SFisoprene', 'SFmonoterp']
-    ds[variables].to_netcdf(processed_path+'BVOC_'+casename+'_'+date+'.nc')
+    ds[variables].to_netcdf(processed_path+casealias+'_'+'BVOC_'+date+'.nc')
 
     # SOA variables
     variables = ['N_AER', 'SOA_A1','SOA_NA','cb_SOA_A1','cb_SOA_NA', 'cb_SOA_A1_OCW', 'cb_SOA_NA_OCW']
-    ds[variables].to_netcdf(processed_path+'SOA_'+casename+'_'+date+'.nc')
+    ds[variables].to_netcdf(processed_path+casealias+'_'+'SOA_'+date+'.nc')
 
     # CLOUD PROPERTIES
     variables = ['ACTNL', 'ACTREL','CDNUMC', 'CLDHGH', 'CLDLOW', 'CLDMED', 'CLDTOT', 'CLDLIQ', 'CLOUD', 'CLOUDCOVER_CLUBB', 'FCTL', 'LWCF', 'SWCF ', 'NUMLIQ', 'TGCLDLWP']
-    ds[variables].to_netcdf(processed_path+'CLOUDPROP_'+casename+'_'+date+'.nc')
+    ds[variables].to_netcdf(processed_path+casealias+'_'+'CLOUDPROP_'+date+'.nc')
 
     # RADIATIVE COMPONENTS
     variables = ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LHFLX', 'OMEGAT', 'SHFLX']
-    ds[variables].to_netcdf(processed_path+'RADIATIVE_'+casename+'_'+date+'.nc')
+    ds[variables].to_netcdf(processed_path+casealias+'_'+'RADIATIVE_'+date+'.nc')
 
     """
                 if 'SW_rest_Ghan' == var:
