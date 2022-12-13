@@ -20,8 +20,9 @@ The thesis work explores the response in the atmosphere-land interactions to an 
  *\*data is not uploaded on the GitHub repository for storage capacity*
  
  *\**notebooks analysising LPJGUESS data are not imported for confidential content*
-
- <img align="center" width="500" src="./img/github_workflow.png">
+<p align="center">
+ <img align="centre" width="500" src="./img/github_workflow.png">
+</p>
 
 ## Contributing
 
