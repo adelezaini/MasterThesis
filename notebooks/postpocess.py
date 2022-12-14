@@ -4,7 +4,6 @@ import glob
 import netCDF4
 import xarray as xr
 from dataset_manipulation import fix_cam_time
-import sys
 
 """
 Example usage:
@@ -203,6 +202,7 @@ for var in variables:
     ds[var].to_netcdf(wpath+var+"_"+case+"_"+date+".nc")
 """
 if __name__ == '__main__':
+    import sys
 
-args = sys.argv
-main(*args[1:])
+    args = sys.argv
+    main(*args[1:])
