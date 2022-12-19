@@ -1,28 +1,34 @@
 ########## Code inspired by Astrid BG ############
 import numpy as np
-import glob
 import netCDF4
+import pandas as pd
 import xarray as xr
+import glob #return all file paths that match a specific pattern
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+import sys; sys.path.append("..")
 from dataset_manipulation import fix_cam_time
 
 """
 Example usage:
-python postprocess.py casename casealias h2
+python3 postprocess.py casename casealias h2
+
+python3 postprocess.py VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19 IDEAL-ON h1
 """
 
-raw_path = '../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
-processed_path = '../processed-data/output/'
+raw_path = '../../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
+processed_path = '../../processed-data/output/'
 
 def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
          
-    fp = raw_path+casename+'/atm/hist/'+casename+'.cam.'+history_field+'.*.nc'
-
+    fp = raw_path+casename+'/atm/hist/'+casename+'.cam.h0.*.nc' #VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19.cam.h0.2007-01.nc
     all_files = glob.glob(fp)
     all_files.sort()
-    print('Files found')
+    print("Files found")
 
     ds = xr.open_mfdataset(all_files)
-    print('Dataset created')
+    print("Dataset created")
 
     #-----------------------------
     # Postprocessing of model data
@@ -34,7 +40,7 @@ def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,his
     # Remove spinup months of data set
     ds = ds.isel(time=slice(12,len(ds.time)))
 
-    print('Postprocessing completed')
+    print("Postprocessing completed")
 
     #--------------------------------------------------------------------
     # Store relevant variables intermediately to save time when plotting,
@@ -45,19 +51,20 @@ def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,his
     # BVOC variables
     variables = ['SFisoprene', 'SFmonoterp']
     ds[variables].to_netcdf(processed_path+casealias+'_'+'BVOC_'+date+'.nc')
-
     # SOA variables
     variables = ['N_AER', 'SOA_A1','SOA_NA','cb_SOA_A1','cb_SOA_NA', 'cb_SOA_A1_OCW', 'cb_SOA_NA_OCW']
     ds[variables].to_netcdf(processed_path+casealias+'_'+'SOA_'+date+'.nc')
-
     # CLOUD PROPERTIES
-    variables = ['ACTNL', 'ACTREL','CDNUMC', 'CLDHGH', 'CLDLOW', 'CLDMED', 'CLDTOT', 'CLDLIQ', 'CLOUD', 'CLOUDCOVER_CLUBB', 'FCTL', 'LWCF', 'SWCF ', 'NUMLIQ', 'TGCLDLWP']
+    variables = ['ACTNL', 'ACTREL','CDNUMC', 'CLDHGH', 'CLDLOW', 'CLDMED', 'CLDTOT', 'CLDLIQ', 'CLOUD', 'CLOUDCOVER_CLUBB', 'FCTL', 'LWCF', 'SWCF', 'NUMLIQ', 'TGCLDLWP']
     ds[variables].to_netcdf(processed_path+casealias+'_'+'CLOUDPROP_'+date+'.nc')
-
     # RADIATIVE COMPONENTS
     variables = ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LHFLX', 'OMEGAT', 'SHFLX']
     ds[variables].to_netcdf(processed_path+casealias+'_'+'RADIATIVE_'+date+'.nc')
-
+    # TURBULENT FLUXES
+    variables = ['LHFLX', 'OMEGAT', 'SHFLX']
+    ds[variables].to_netcdf(processed_path+casealias+'_'+'TURBFLUXES_'+date+'.nc')
+    
+    
     """
                 if 'SW_rest_Ghan' == var:
                     varnames_mod = varnames_mod + ['FSNTCDRF']
@@ -76,10 +83,6 @@ def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,his
                 elif var == 'NCFT_Ghan':
                     varnames_mod = varnames_mod + ['FSNT_DRF', 'FSNTCDRF'] + ['FLNT_DRF', 'FLNTCDRF']
     """
-    # TURBULENT FLUXES
-    variables = ['LHFLX', 'OMEGAT', 'SHFLX']
-    ds[variables].to_netcdf(processed_path+'TURBFLUXES_'+casename+'_'+date+'.nc')
-
 
 """
 rpath="/projects/NS9600K/astridbg/data/model/noresm_rawdata/cases/"
