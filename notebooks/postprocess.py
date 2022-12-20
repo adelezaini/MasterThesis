@@ -14,11 +14,11 @@ from dataset_manipulation import fix_cam_time
 Example usage:
 python3 postprocess.py casename casealias h2
 
-python3 postprocess.py VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19 IDEAL-ON h1
+python3 postprocess.py VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19 IDEAL-ON
 """
 
-raw_path = '../../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
-processed_path = '../../processed-data/output/'
+raw_path = '../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
+processed_path = '../../processed-data/postprocessing/'
 
 def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
          
