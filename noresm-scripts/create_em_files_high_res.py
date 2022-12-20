@@ -5,18 +5,18 @@ from pathlib import Path
 
 # Default settings
 
-path_to_noresm_archive = '/cluster/home/adelez/nird/archive' #'/proj/bolinc/users/x_sarbl/noresm_archive'
+path_to_noresm_archive = '/cluster/home/adelez/storage/archive' #'/proj/bolinc/users/x_sarbl/noresm_archive'
 outpath_default = '/cluster/home/adelez/noresm-inputdata' #'/proj/bolinc/users/x_sarbl/noresm_input_data'
 
 # How to load nco on your system
-load_nco_string = 'module load NCO/4.6.3-nsc1'
+load_nco_string = 'module load NCO/5.0.3-intel-2021b' #module load NCO/4.6.3-nsc1'
 
 """
 Example usage: 
 python create_em_files_high_res.py case_name 2015 2018 SFisoprene h2 /proj/bolinc/users/x_sarbl/noresm_archive /proj/bolinc/users/x_sarbl/noresm_input_data 
 
-python create_em_files_high_res.py CTRL_2000_sec_nudg_f19_f19 2007 2012 [SFisoprene/SFmonoterp
-] h1 /cluster/home/adelez/nird/archive /cluster/home/adelez/noresm-inputdata 
+python3 create_em_files_high_res.py CTRL_2000_sec_nudg_f19_f19 2007 2012 [SFisoprene/SFmonoterp
+] h1 /cluster/home/adelez/storage/archive /cluster/home/adelez/noresm-inputdata 
 """
 
 Av = 6.022e23  # Avogadro's number
@@ -32,7 +32,7 @@ M_dic = dict(SFmonoterp=M_mono,
 
 # %%
 def main(case_name, startyear, endyear, var,
-         history_field='h2',
+         history_field='h1',
          postfix='',
          path=path_to_noresm_archive,
          output_path=outpath_default

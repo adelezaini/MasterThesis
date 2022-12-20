@@ -4,6 +4,8 @@ training/data/*
 training/NE1_50M_SR_W/*
 processed-data/*/*/*.nc
 processed-data/*/*.nc
+noresm-inputdata/*.nc
+noresm-inputdata/*/*.nc
 
 # Confidential content
 */LPJ_GUESS/
