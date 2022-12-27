@@ -6,7 +6,7 @@ from pathlib import Path
 # Default settings
 
 path_to_noresm_archive = '/cluster/home/adelez/storage/archive' #'/proj/bolinc/users/x_sarbl/noresm_archive'
-outpath_default = '/cluster/home/adelez/noresm-inputdata' #'/proj/bolinc/users/x_sarbl/noresm_input_data'
+outpath_default = '/cluster/home/adelez/noresm-inputdata/BVOCfromCTRL' #'/proj/bolinc/users/x_sarbl/noresm_input_data'
 
 # How to load nco on your system
 load_nco_string = 'module load NCO/5.0.3-intel-2021b' #module load NCO/4.6.3-nsc1'
@@ -16,7 +16,7 @@ Example usage:
 python create_em_files_high_res.py case_name 2015 2018 SFisoprene h2 /proj/bolinc/users/x_sarbl/noresm_archive /proj/bolinc/users/x_sarbl/noresm_input_data 
 
 python3 create_em_files_high_res.py CTRL_2000_sec_nudg_f19_f19 2007 2012 [SFisoprene/SFmonoterp
-] h1 /cluster/home/adelez/storage/archive /cluster/home/adelez/noresm-inputdata 
+] h1 /cluster/home/adelez/storage/archive /cluster/home/adelez/noresm-inputdata/BVOCfromCTRL
 """
 
 Av = 6.022e23  # Avogadro's number
@@ -106,15 +106,15 @@ def main(case_name, startyear, endyear, var,
     new_var = var_dic[var]
     M_var = M_dic[var]
     # Calculate emissions in molec/cm2/s
-    co = f'ncap2 -A -O -s "{new_var}={var}*{Av}/{M_var}*1e-4" {outfile}'
+    co = f'ncap2 -A -s "{new_var}={var}*{Av}/{M_var}*1e-4" {outfile}' #-O
     comms.append(co)
     # %%
     diff = (startyear - 2000) * 10000
     # Change date to 2000
     if diff > 0:
-        co = f'ncap2 -A -O -s "date=date-{diff}."  {outfile}'
+        co = f'ncap2 -A -s "date=date-{diff}."  {outfile}' #-O
     else:
-        co = f'ncap2 -A -O -s "date=date+{-diff}."  {outfile}'
+        co = f'ncap2 -A -s "date=date+{-diff}."  {outfile}' #-O
     comms.append(co)
 
     # change units:
