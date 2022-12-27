@@ -60,7 +60,50 @@ def tree_aggregation(pfts, tree_indexes, tree_macro_index = 15, lnd_frac=xr.Data
     return pfts_macro
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def tree_separation(pft_macro, tree_lon_perc, prod_along_dim, tree_indexes = [2,3,8], tree_macro_index=15, index_order=None, attrs=None):
+def tree_separation(tree_macro, original_tree_pfts, lat_shift):
+    """
+    Disaggregation method for tree PFTs based on the original with a latitude shift applied
+    Args:
+    - tree_macro (DataArray): edited tree configuration - aggregated in one "macro" PFT
+    - original_tree_pfts (DataArray): original tree configuration - disaggregated
+    - lat_shift (float): latitude shift (north degree)
+    Return:
+    - tree_pfts (DataArray): disaggregated tree configuration
+    """
+    
+    # Find percentage of tree occurrance [0-1]
+    tree_perc_original = original_tree_pfts/original_tree_pfts.sum('natpft')
+    
+    # Apply the shift
+    tree_perc = tree_perc_original.copy()
+    tree_perc = tree_perc.assign_coords({'lat': tree_perc_original.lat+lat_shift})
+    tree_perc = tree_perc.interp(lat=original_tree_pfts.lat)#.fillna(0.)
+    
+    # In applying the shift (and filtering where there is land), some gridcells are left NaN
+    #-> just fill with previous values (approximation)
+    tree_perc = tree_perc.where(tree_macro>0.).fillna(tree_perc_original)
+    
+    # Smooth it a bit to avoid topography dependence
+    tree_perc = tree_perc.rolling(dict(lat=3, lon=3), center=True).mean().fillna(tree_perc)
+    
+    # In these operationations the overall normalisation to 1 is lost...
+    tree_perc = tree_perc/tree_perc.sum('natpft')
+    
+    # Fromthe some, divide into the different pfts according to the percentage
+    tree_pfts = tree_macro * tree_perc
+    
+    """
+    # Let's keep normalization as much as possible
+    a = tree_macro.copy()
+    b = tree_pfts.sum('natpft')
+    errata_diff = a-b
+    # Add the difference to the first tree PFT
+    tree_pfts[dict(natpft=0)] = tree_pfts[dict(natpft=0)].where(a != b, tree_pfts[dict(natpft=0)]+errata_diff)
+    """
+    return tree_pfts
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def tree_separation_longitude(pft_macro, tree_lon_perc, prod_along_dim, tree_indexes = [2,3,8], tree_macro_index=15, index_order=None, attrs=None):
     """Disaggregation method of the tree PFTs based on the longitude occurance percentage.
         Return a DataArray with natpft index order [tree_indexes, other_indexes]. Change in adding index_order=list of indexes
         Args:
@@ -127,6 +170,11 @@ def surfdatamap_modification(original_ds, pfts_tot, edited_pfts, method = None):
                 if replacement_cell.values>=0.:
                     edited_config.loc[dict(lat=lat, lon=lon, natpft = n)] = replacement_cell
     """
+    # Let's keep normalization as much as possible
+    errata_diff = 100. - edited_config.sum('natpft')
+    # Add the difference to the first tree PFT
+    edited_config[dict(natpft=1)] = edited_config[dict(natpft=1)].where(edited_config.sum('natpft')==100., edited_config[dict(natpft=1)]+errata_diff)
+    
     # Convert to orginal format
     ep = convert180_360(edited_config)
     ep = convert_to_lsmcoord(ep.fillna(0.))

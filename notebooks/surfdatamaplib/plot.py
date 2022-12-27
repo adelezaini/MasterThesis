@@ -107,13 +107,14 @@ def map_lonlatdistribution(ds, lnd_frac=xr.DataArray(None), title=None, cbar_lab
     
 ################ Boreal PFTs plots ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def basic_pft_map(da, title, extent_lat=40, figsize=None, proj=ccrs.PlateCarree(), col_wrap=3, cmap='Greens', contourf = False, titles = None, **kwargs):
+def basic_pft_map(da, title, extent_lat=45, figsize=None, proj=ccrs.PlateCarree(), col_wrap=None, cmap='Greens', contourf = False, titles = None, **kwargs):
     """Analogous plot of da.plot(col='natpft'), but prettier (coastlines, proper colormap...)"""
     npft=len(da.natpft.values)
+    if not col_wrap: col_wrap = npft
     
     # Gather all the arguments of the plot
     plot_args = dict(col='natpft', figsize=figsize, cmap=cmap, col_wrap=col_wrap, transform=ccrs.PlateCarree(), subplot_kws={"projection": proj}, add_colorbar=False, **kwargs)
-    
+
     # If not plot.contourf -> plot.pcolormesh
     if not contourf: p = da.plot(**plot_args) #pcolormesh
     else: p = da.plot.contourf(**plot_args)
@@ -121,13 +122,15 @@ def basic_pft_map(da, title, extent_lat=40, figsize=None, proj=ccrs.PlateCarree(
     for i, ax in enumerate(p.axes.flat):
         ax_map_properties(ax, gridlines=False, rivers=False, borders=False)
         ax.set_extent([-180,180, extent_lat,90], crs = ccrs.PlateCarree())
-        if not col_wrap: ax.set_position([0.04+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
+        #if col_wrap == npft: ax.set_position([0.025+i*(1/npft+0.01), 0.15, 1/npft, 0.66])
         if titles and i<len(titles): ax.set_title(titles[i])
             
         if proj== ccrs.PlateCarree():
             ax.set_aspect('auto')
             ax.set_xticks(ax.get_xticks()[abs(ax.get_xticks())<=180])
             ax.set_yticks(ax.get_yticks()[abs(ax.get_yticks())<=90])
+            
+    p.fig.subplots_adjust(left =0.04, right=1.04, wspace =0.03, hspace=0.2, bottom=0.15, top=0.85)
 
     p.add_colorbar()
     p.fig.suptitle(title, size=max(figsize)) if figsize else p.fig.suptitle(title)
