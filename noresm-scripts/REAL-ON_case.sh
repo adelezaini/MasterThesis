@@ -7,7 +7,7 @@ export CESM_ACCOUNT=nn8057k #NN8057K
 export PROJECT=nn8057k
 export NORESM_ROOT=/cluster/home/$USER/NorESM-sec
 export CESM_DATA=/cluster/shared/noresm/inputdata
-export CASE_NAME=IDEAL-ON_2000_sec_nudg_f19_f19 #NF2000secBgc #sec
+export CASE_NAME=REAL-ON_2000_sec_nudg_f19_f19 #NF2000secBgc #sec
 export COMPSET=2000_CAM60%NORESM%SEC%NORPDDMSBC%SDYN_CLM50%BGC-CROP_CICE%PRES_DOCN%DOM_MOSART_SGLC_SWAV
 export RES=f19_f19
 
