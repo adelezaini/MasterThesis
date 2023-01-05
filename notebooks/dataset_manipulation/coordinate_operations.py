@@ -145,39 +145,4 @@ def filter_lonlat(df, lonlat):
     df_new.iloc[:,0] = df_new.iloc[:,0][filter_coord]
     return df_new.dropna()
 
-#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def fix_cam_time(ds, type = 'datetime64'):
-    # Inspired by Marte Sofie Buraas / Ada Gjermundsen
-    
-    """ NorESM raw CAM h0 files has incorrect time variable output,
-    thus it is necessary to use time boundaries to get the correct time
-    If the time variable is not corrected, none of the functions involving time
-    e.g. yearly_avg, seasonal_avg etc. will provide correct information
-    Source: https://noresm-docs.readthedocs.io/en/latest/faq/postp_plotting_faq.html
-    
-    Parameters
-    ----------
-    ds : xarray.DaraSet
-    type: string, type of ds.time
-    
-    Returns
-    -------
-    ds : xarray.DaraSet with corrected time
-    """
 
-    # monthly data: refer data to the 15th of the month
-    if type == 'DatetimeNoLeap':
-      from cftime import DatetimeNoLeap
-          
-      months = ds.time_bnds.isel(nbnd=0).dt.month.values
-      years = ds.time_bnds.isel(nbnd=0).dt.year.values
-      dates = [DatetimeNoLeap(year, month, 15) for year, month in zip(years, months)]
-      
-    elif type == 'datetime64':
-      dates = (ds.time_bnds + np.timedelta64(14, 'D')).values[:-1]
-      
-    else:
-      raise ValueError("time type not supported. Choose 'DatetimeNoLeap' or 'datetime64'")
-      
-    ds = ds.assign_coords(time=dates)
-    return ds
