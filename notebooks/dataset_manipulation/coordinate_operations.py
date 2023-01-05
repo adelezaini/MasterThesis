@@ -1,21 +1,23 @@
 ###### This python file collects fuctions to manipulate Xarray Dataset/DataArray
 
-####### Import packages
+# Import packages
 import numpy as np
 import netCDF4 as nc
 import xarray as xr; xr.set_options(display_style='html', keep_attrs=True)
 import pandas as pd
 import os
 
-################ Miscellaneous
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+# Miscellaneous
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def check_da_equal(da1, da2):
     p = da1-da2
     check = p.where(p!=0.,drop=True).squeeze()
     if not len(check.values): print("The DataArrays are equal")
     else: print("The DataArrays are different. Check NaN values")
-    
-################ Operations over coordinates
+  
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+# Operations over coordinates
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def convert360_180(ds):
     """Convert the longitude of the given xr:Dataset from [0-360] to [-180-180] deg"""
@@ -144,26 +146,38 @@ def filter_lonlat(df, lonlat):
     return df_new.dropna()
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def fix_cam_time(ds):
-    # Author: Marte Sofie Buraas / Ada Gjermundsen    
-
+def fix_cam_time(ds, type = 'datetime64'):
+    # Inspired by Marte Sofie Buraas / Ada Gjermundsen
+    
     """ NorESM raw CAM h0 files has incorrect time variable output,
     thus it is necessary to use time boundaries to get the correct time
     If the time variable is not corrected, none of the functions involving time
     e.g. yearly_avg, seasonal_avg etc. will provide correct information
+    Source: https://noresm-docs.readthedocs.io/en/latest/faq/postp_plotting_faq.html
     
     Parameters
     ----------
     ds : xarray.DaraSet
+    type: string, type of ds.time
+    
     Returns
     -------
-    ds_weighted : xarray.DaraSet with corrected time
+    ds : xarray.DaraSet with corrected time
     """
-    from cftime import DatetimeNoLeap
 
-    months = ds.time_bnds.isel(nbnd=0).dt.month.values
-    years = ds.time_bnds.isel(nbnd=0).dt.year.values
     # monthly data: refer data to the 15th of the month
-    dates = [DatetimeNoLeap(year, month, 15) for year, month in zip(years, months)]
+    if type == 'DatetimeNoLeap':
+      from cftime import DatetimeNoLeap
+          
+      months = ds.time_bnds.isel(nbnd=0).dt.month.values
+      years = ds.time_bnds.isel(nbnd=0).dt.year.values
+      dates = [DatetimeNoLeap(year, month, 15) for year, month in zip(years, months)]
+      
+    elif type == 'datetime64':
+      dates = (ds.time_bnds + np.timedelta64(14, 'D')).values[:-1]
+      
+    else:
+      raise ValueError("time type not supported. Choose 'DatetimeNoLeap' or 'datetime64'")
+      
     ds = ds.assign_coords(time=dates)
     return ds
