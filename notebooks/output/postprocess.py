@@ -1,6 +1,6 @@
 ########## Code inspired by Astrid BG ############
 import numpy as np
-import netCDF4
+#import netCDF4
 import pandas as pd
 import xarray as xr
 import glob #return all file paths that match a specific pattern
@@ -14,7 +14,7 @@ from dataset_manipulation import fix_cam_time
 Example usage:
 python3 postprocess.py casename casealias h2
 
-python3 postprocess.py VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19 IDEAL-ON
+python3 postprocess.py IDEAL-ON_2000_sec_nudg_f19_f19 IDEAL-ON
 """
 
 raw_path = '../../archive/' #Betzy: /cluster/home/adelez/nird/ #Nird: /nird/home/adelez/storage/
@@ -22,7 +22,7 @@ processed_path = '../../processed-data/postprocessing/'
 
 def main(casename, casealias, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
          
-    fp = raw_path+casename+'/atm/hist/'+casename+'.cam.h0.*.nc' #VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19.cam.h0.2007-01.nc
+    fp = raw_path+casename+'/atm/hist/'+casename+'.cam.'+history_field+'.*.nc' #VEG_SHIFT_IDEAL_2000_sec_nudg_f19_f19.cam.h0.2007-01.nc
     all_files = glob.glob(fp)
     all_files.sort()
     print("Files found")
