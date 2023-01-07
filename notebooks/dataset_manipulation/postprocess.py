@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 import glob #return all file paths that match a specific pattern
 
-always_include = ['LANDFRAC', 'GRIDAREA', 'gw', 'date', 'time_bnds']
+atm_always_include = ['LANDFRAC', 'GRIDAREA', 'gw', 'date', 'time_bnds']
 lnd_always_include = ['area', 'landfrac', 'landmask', 'pftmask', 'PCT_LANDUNIT']
 pressure_variables = ['P0', 'hyam', 'hybm', 'PS', 'hyai', 'hybi', 'ilev']
 Ghan_vars = ['SWDIR', 'LWDIR', 'DIR', 'SWCF', 'LWCF', 'NCFT', 'SW_rest', 'LW_rest']
@@ -12,8 +12,9 @@ Ghan_vars = ['SWDIR', 'LWDIR', 'DIR', 'SWCF', 'LWCF', 'NCFT', 'SW_rest', 'LW_res
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def fix_cam_time(ds, timetype = 'datetime64'):
     # Inspired by Marte Sofie Buraas / Ada Gjermundsen
+    # Adampted for cam and clm output and to have time in DatetimeNoLeap or in 'datetime64' types (default)
     
-    """ NorESM raw CAM h0 files has incorrect time variable output,
+    """ NorESM raw h0 files has incorrect time variable output,
     thus it is necessary to use time boundaries to get the correct time
     If the time variable is not corrected, none of the functions involving time
     e.g. yearly_avg, seasonal_avg etc. will provide correct information
@@ -29,16 +30,22 @@ def fix_cam_time(ds, timetype = 'datetime64'):
     ds : xarray.DaraSet with corrected time
     """
 
+    # Make compatible variable names for CAM and CLM (CLM names converted to CAM)
+    ds_ = ds.copy(deep=True)
+    if 'time_bounds' in list(ds_.data_vars): 
+        ds_ = ds_.rename_vars(dict(time_bounds='time_bnds'))
+        ds_ = ds_.rename_dims(dict(hist_interval='nbnd'))
+
     # monthly data: refer data to the 15th of the month
     if timetype == 'DatetimeNoLeap':
         from cftime import DatetimeNoLeap
 
-        months = ds.time_bnds.isel(nbnd=0).dt.month.values
-        years = ds.time_bnds.isel(nbnd=0).dt.year.values
+        months = ds_.time_bnds.isel(nbnd=0).dt.month.values
+        years = ds_.time_bnds.isel(nbnd=0).dt.year.values
         dates = [DatetimeNoLeap(year, month, 15) for year, month in zip(years, months)]
       
     elif timetype == 'datetime64':
-        dates = list(ds.time_bnds.isel(nbnd=0).values + np.timedelta64(14, 'D'))
+        dates = list(ds_.time_bnds.isel(nbnd=0).values + np.timedelta64(14, 'D'))
       
     else:
         raise ValueError("time type not supported. Choose 'DatetimeNoLeap' or 'datetime64'")
@@ -47,7 +54,7 @@ def fix_cam_time(ds, timetype = 'datetime64'):
     return ds
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def variables_by_component(comp):
+def variables_by_component(comp, bvoc=True):
     """Return dict of selected variables per cathegory given the respective component"""
 
     if comp == 'atm':
@@ -66,7 +73,7 @@ def variables_by_component(comp):
         lnd_vars = ['PCT_NAT_PFT','GPP', 'NPP', 'NEE', 'NEP', 'STORVEGN', 'TOTPFTN', 'TOTVEGN',
                 'TOTCOLC', 'TOTECOSYSC', 'TOTPFTC', 'TOTVEGC', 'STORVEGC','TLAI']
 
-        if casename.find('OFF')<0.:
+        if bvoc: #casename.find('OFF')<0.:
             variables = {'LAND': ['MEG_isoprene', 'MEG_limonene', 'MEG_myrcene', 'MEG_ocimene_t_b', 
                                   'MEG_pinene_a', 'MEG_pinene_b', 'MEG_sabinene'] + lnd_vars}
         else:
@@ -110,7 +117,8 @@ def create_dataset(raw_path, casename, comp, history_field='h0', full_dset = Fal
     print("Dataset created")
     
     # Fix timestamp of model data
-    if fix_timestamp and history_field == 'h0': ds = fix_cam_time(ds, timetype = fix_timestamp)
+    if fix_timestamp and history_field == 'h0': 
+        ds = fix_cam_time(ds, timetype = fix_timestamp)
 
     # Remove spinup months of data set
     ds = ds.isel(time=slice(spinup_months,len(ds.time)))
@@ -119,13 +127,16 @@ def create_dataset(raw_path, casename, comp, history_field='h0', full_dset = Fal
     if full_dset: 
         return ds
     
-    else: 
-        # Select variables
-        variables = always_include
-        if comp == 'lnd': variables = variables + lnd_always_include
-        if comp == 'atm' and pressure_vars: variables = variables + pressure_variables
-            
-        variables = variables + sum([*variables_by_component(comp).values()], []) # from dict to flat list
+    else: # Select variables
+        bvoc = True # variable for adding bvoc variables in the land component, useless in atm
+        if comp == 'atm':
+            variables = atm_always_include
+            if pressure_vars: variables = variables + pressure_variables
+        elif comp == 'lnd': 
+            variables = lnd_always_include
+            if casename.find('OFF')>0.: bvoc = False # deactivate bvoc variables in simulation with bvoc controlled (tagged with '*-OFF')
+
+        variables = variables + sum([*variables_by_component(comp, bvoc).values()], []) # from dict to flat list
         
         return ds[variables]
 
@@ -245,83 +256,86 @@ def aerosol_cloud_forcing_scomposition_Ghan(ds):
     https://acp.copernicus.org/articles/13/9971/2013/acp-13-9971-2013.pdf"""
     
     ds_ = ds.copy(deep=True)
-    
-    for var in Ghan_vars:
+
+    # If the dataset is provided of the exential variables to perfom the Ghan's scomposition...
+    if ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF'] in list(ds.data_vars):
         
-    
-        if 'SWDIR' == var:
-            ds_[var] = ds_['FSNT'] - ds_['FSNT_DRF']
-            ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
-            ds_[var].attrs['long_name'] = "Shortwave aerosol direct radiative forcing - Ghan's scomposition"
-
-        if 'LWDIR' == var:
-            ds_[var] = -(ds_['FLNT'] - ds_['FLNT_DRF'])
-            ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-            ds_[var].attrs['long_name'] = "Longwave aerosol direct radiative forcing - Ghan's scomposition"
-
-
-        if 'DIR' == var:
-            ds_[var] = ds_['LWDIR'] + ds_['SWDIR']
-            ds_[var].attrs['units'] = ds_['LWDIR'].attrs['units']
-            ds_[var].attrs['long_name'] = "Net aerosol direct radiative forcing - Ghan's scomposition"
-
-
-        if 'SWCF' == var: # this will overwrite the existing one
-            ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF']
-            ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
-            ds_[var].attrs['long_name'] = "Shortwave cloud radiative forcing - Ghan's scomposition"
-
-
-        if 'LWCF' == var: # this will overwrite the existing one
-            ds_[var] = -(ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
-            ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-            ds_[var].attrs['long_name'] = "Longwave cloud radiative forcing - Ghan's scomposition"
-
-
-        if 'NCFT' == var:
-            ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF'] - (ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
-            ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-            ds_[var].attrs['long_name'] = "Net cloud radiative forcing - Ghan's scomposition"
-
-
-        if 'SW_rest' == var:
-            ds_[var] = ds_['FSNTCDRF']
-            ds_[var].attrs['long_name'] = "Shortwave surface albedo radiative forcing - Ghan's scomposition"
-
-
-        if 'LW_rest' == var:
-            ds_[var] = ds_['FLNTCDRF']
-            ds_[var].attrs['long_name'] = "Clear sky total column longwave flux - Ghan's scomposition"
+        for var in Ghan_vars:
             
-        #print(var, "-", ds_[var].attrs["long_name"])
+        
+            if 'SWDIR' == var:
+                ds_[var] = ds_['FSNT'] - ds_['FSNT_DRF']
+                ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Shortwave aerosol direct radiative forcing - Ghan's scomposition"
+
+            if 'LWDIR' == var:
+                ds_[var] = -(ds_['FLNT'] - ds_['FLNT_DRF'])
+                ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Longwave aerosol direct radiative forcing - Ghan's scomposition"
+
+
+            if 'DIR' == var:
+                ds_[var] = ds_['LWDIR'] + ds_['SWDIR']
+                ds_[var].attrs['units'] = ds_['LWDIR'].attrs['units']
+                ds_[var].attrs['long_name'] = "Net aerosol direct radiative forcing - Ghan's scomposition"
+
+
+            if 'SWCF' == var: # this will overwrite the existing one
+                ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF']
+                ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Shortwave cloud radiative forcing - Ghan's scomposition"
+
+
+            if 'LWCF' == var: # this will overwrite the existing one
+                ds_[var] = -(ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
+                ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Longwave cloud radiative forcing - Ghan's scomposition"
+
+
+            if 'NCFT' == var:
+                ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF'] - (ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
+                ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Net cloud radiative forcing - Ghan's scomposition"
+
+
+            if 'SW_rest' == var:
+                ds_[var] = ds_['FSNTCDRF']
+                ds_[var].attrs['long_name'] = "Shortwave surface albedo radiative forcing - Ghan's scomposition"
+
+
+            if 'LW_rest' == var:
+                ds_[var] = ds_['FLNTCDRF']
+                ds_[var].attrs['long_name'] = "Clear sky total column longwave flux - Ghan's scomposition"
+                
+            #print(var, "-", ds_[var].attrs["long_name"])
+                
+        # Add attributes based on Ghan scomposition
+        
+        for var in list(ds_.keys()):
             
-    # Add attributes based on Ghan scomposition
-    
-    for var in list(ds_.keys()):
-        
-        if var == "FSNT":
-            ds_[var].attrs["Ghan_name"] = 'SWTOT'
-            ds_[var].attrs["Ghan_long_name"] = 'Shortwave total forcing at TOA'
-        elif var == "FLNT":
-            ds_[var].attrs["Ghan_name"] = 'LWTOT'
-            ds_[var].attrs["Ghan_long_name"] = 'Longwave total forcing at TOA'
-        elif var == "FSNT_DRF":
-            ds_[var].attrs["Ghan_name"] = 'SW_clean'
-            ds_[var].attrs["Ghan_long_name"] = 'Shortwave without direct aerosol forcing (scattering, absorbing)'
-        elif var == "FSNTCDRF":
-            ds_[var].attrs["Ghan_name"] = 'SW_clean_clear'
-            ds_[var].attrs["Ghan_long_name"] = 'Shortwave without direct aerosol and cloud forcing'
-        elif var == "FLNT_DRF":
-            ds_[var].attrs["Ghan_name"] = 'LW_clean'
-            ds_[var].attrs["Ghan_long_name"] = 'Longwave without direct aerosol forcing (scattering, absorbing)'
-        elif var == "FLNTCDRF":
-            ds_[var].attrs["Ghan_name"] = 'LW_clean_clear'
-            ds_[var].attrs["Ghan_long_name"] = 'Longwave without direct aerosol and cloud forcing'
-        else:
-            continue
-        #print(var, "->", ds_[var].attrs["Ghan_name"], "-", ds_[var].attrs["Ghan_long_name"])
-        
-    print("Ghan's scomposition completed")
+            if var == "FSNT":
+                ds_[var].attrs["Ghan_name"] = 'SWTOT'
+                ds_[var].attrs["Ghan_long_name"] = 'Shortwave total forcing at TOA'
+            elif var == "FLNT":
+                ds_[var].attrs["Ghan_name"] = 'LWTOT'
+                ds_[var].attrs["Ghan_long_name"] = 'Longwave total forcing at TOA'
+            elif var == "FSNT_DRF":
+                ds_[var].attrs["Ghan_name"] = 'SW_clean'
+                ds_[var].attrs["Ghan_long_name"] = 'Shortwave without direct aerosol forcing (scattering, absorbing)'
+            elif var == "FSNTCDRF":
+                ds_[var].attrs["Ghan_name"] = 'SW_clean_clear'
+                ds_[var].attrs["Ghan_long_name"] = 'Shortwave without direct aerosol and cloud forcing'
+            elif var == "FLNT_DRF":
+                ds_[var].attrs["Ghan_name"] = 'LW_clean'
+                ds_[var].attrs["Ghan_long_name"] = 'Longwave without direct aerosol forcing (scattering, absorbing)'
+            elif var == "FLNTCDRF":
+                ds_[var].attrs["Ghan_name"] = 'LW_clean_clear'
+                ds_[var].attrs["Ghan_long_name"] = 'Longwave without direct aerosol and cloud forcing'
+            else:
+                continue
+            #print(var, "->", ds_[var].attrs["Ghan_name"], "-", ds_[var].attrs["Ghan_long_name"])
+            
+        print("Ghan's scomposition completed")
 
     return ds_
 
@@ -334,12 +348,15 @@ def save_postprocessed(ds, component, processed_path, casealias, pressure_vars=T
     categories = list(variables_by_component(component).keys()) 
     #['LAND'] or ['BVOC', 'SOA', 'CLOUDPROP', 'RADIATIVE', 'TURBFLUXES']
     
-    variables = always_include
-    if component == 'lnd': variables = variables + lnd_always_include
-    if component == 'atm' and pressure_vars: variables = variables + pressure_variables
-            
+    if component == 'atm':
+        variables = atm_always_include      
+        if pressure_vars: variables = variables + pressure_variables
+       
+    elif component == 'lnd': 
+        variables = lnd_always_include
+         
     for cat in categories:
-        variables = always_include + variables_by_component(component)[cat]
+        variables = variables + variables_by_component(component)[cat]
         if cat == 'RADIATIVE': variables = variables + Ghan_vars + variables_by_component(component)['TURBFLUXES']
         if cat == 'TURBFLUXES': continue # merge turbfluxes with radiative
         file_out = casealias+'_'+cat+'_'+date+'.nc'

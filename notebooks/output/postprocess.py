@@ -22,9 +22,9 @@ processed_path = '../../processed-data/postprocessing/'
 # Import, fix units and names, apply Ghan's scomposition, save processed ds
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-def main(casename, casealias, component, history_field='h0'):#, startyear, endyear, var,history_field='h2',postfix='',path=path_to_noresm_archive, output_path=outpath_default):
+def main(casename, casealias, component, history_field='h0'):
     
-    ds = create_dataset(raw_path, casename, component, pressure_vars=True)
+    ds = create_dataset(raw_path, casename, component, history_field=history_field, pressure_vars=True)
     ds = fix_names(fix_units(ds))
     ds = aerosol_cloud_forcing_scomposition_Ghan(ds)
     save_postprocessed(ds, component, processed_path, casealias)
