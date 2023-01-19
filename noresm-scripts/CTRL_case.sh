@@ -1,36 +1,66 @@
 #!/bin/bash
 
+# CTRL case: 
+# - no vegetation shift, 
+# - AMIP simul (details in %NORPDDMSBC) with sectional scheme(%SEC) and nudging (%SDYN)
+# - 7 years (starts in 2007, matching the nudging)
+
 set -o errexit #like assert to check and quit program in case of error
 set -o nounset
 
-export CESM_ACCOUNT=nn8057k #NN8057K
+# Simulation specifics:
+export CASENAME=CTRL_2000_f19_f19
+export SPINUP_CASENAME=CTRL_2000_spinup_f19_f19
+#–––––––––––––––––––––––––––––––––––––––––
+
+export NORESM_ACCOUNT=nn8057k #NN8057K
 export PROJECT=nn8057k
 export NORESM_ROOT=/cluster/home/$USER/NorESM-sec
-export CESM_DATA=/cluster/shared/noresm/inputdata
-export CASE_NAME=CTRL_2000_sec_nudg_f19_f19 #NF2000secBgc #sec
+export NORESM_DATA=/cluster/shared/noresm/inputdata
 export COMPSET=2000_CAM60%NORESM%SEC%NORPDDMSBC%SDYN_CLM50%BGC-CROP_CICE%PRES_DOCN%DOM_MOSART_SGLC_SWAV
 export RES=f19_f19
+#–––––––––––For spin up
+export RESTART_SPINUP_DIR=~/work/archive/$SPINUP_CASENAME/rest/2030-01-01-00000/* #work -> /cluster/work/users/adelez
+export RESTART_DIR=~/noresm-inputdata/restart-cases/$CASENAME/run #noresm-inputdata -> /cluster/projects/nn8057k/adelez/noresm-inputdata
 
 
 cd $NORESM_ROOT
 
 #TAG=$(git describe)
-CASEROOT=~/cases/$CASE_NAME #-$RES #$COMPSET-$RES-$CASE_NAME
+CASEROOT=~/cases/$CASENAME #-$RES #$COMPSET-$RES-$CASE_NAME
 
 rm -rf $CASEROOT #remove previous cases
 
 cd cime/scripts
-./create_newcase --case $CASEROOT --compset $COMPSET --res $RES --machine betzy --run-unsupported --project $CESM_ACCOUNT --handle-preexisting-dirs r
+./create_newcase --case $CASEROOT --compset $COMPSET --res $RES --machine betzy --run-unsupported --project $NORESM_ACCOUNT --handle-preexisting-dirs r
 
 cd $CASEROOT
 
-./xmlchange CALENDAR=GREGORIAN
+#–––––––––––––– Restart from spinup
+# 1. move data from work/archive/spinup-casename/rest to noresm-inpudata and unzip it
+mkdir $RESTART_DIR
+cp $RESTART_SPINUP_DIR/* $RESTART_DIR/
+gunzip $RESTART_DIR/*.gz
+# 2. Hybrid run: restart from spinned up climate, but with start date matching nudging
+./xmlchange RUN_TYPE=hybrid
+./xmlchange RUN_REFDIR=$RESTART_DIR                 # path to restarts 
+./xmlchange RUN_REFCASE=$SPINUP_CASENAME            # experiment name for restart files
+./xmlchange RUN_REFDATE=2030-01-01                  # date of restart files
+./xmlchange RUN_STARTDATE=2007-01-01                # date in simulation - matches with ERA-Interim nudging
+./xmlchange GET_REFCASE=TRUE                        # get refcase from outside rundir 
+
+#–––––––––––––––––
 ./xmlchange STOP_OPTION=nyears
-./xmlchange STOP_N=6
-./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the RESTART_OPTION)
+./xmlchange STOP_N=7
+# Restart default
+./xmlchange REST_OPTION=nyears
+./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the REST_OPTION)
+#./xmlchange CONTINUE_RUN=TRUE
 ./xmlchange JOB_WALLCLOCK_TIME=24:00:00
-./xmlchange RUN_STARTDATE=2007-01-01
+# Nudging
+./xmlchange CALENDAR=GREGORIAN
 #./xmlchange CAM_CONFIG_OPTS=-offline_dyn
+
 
 #./case.build --clean
 ./case.setup
