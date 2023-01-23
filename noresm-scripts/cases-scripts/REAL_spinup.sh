@@ -9,8 +9,10 @@
 set -o errexit #like assert to check and quit program in case of error
 set -o nounset
 
+# Simulation specifics:
 export CASENAME=REAL_2000_spinup_f19_f19
 export SURFDATA_FILE='/cluster/home/adelez/noresm-inputdata/surfdata_map/surfdata_1.9x2.5_hist_78pfts_CMIP6_simyr2000_c190304_GFDL.nc'
+#–––––––––––––––––––––––––––––––––––––––––
 
 export NORESM_ACCOUNT=nn8057k #NN8057K
 export PROJECT=nn8057k
@@ -32,17 +34,24 @@ cd cime/scripts
 
 cd $CASEROOT
 
-./xmlchange STOP_OPTION=nyears
-./xmlchange STOP_N=30
+# –––––––––––– Start simulation in: ––––––––––––
 ./xmlchange RUN_STARTDATE=2000-01-01
-# Restart
+# –––––––––––– Generate restart files every: ––––––––––––
 ./xmlchange REST_OPTION=nyears
 ./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the RESTART_OPTION)
+# –––––––––––– Duration of simulation: ––––––––––––
+./xmlchange STOP_OPTION=nyears
+./xmlchange STOP_N=5 #30 years
 #./xmlchange CONTINUE_RUN=TRUE
-./xmlchange JOB_WALLCLOCK_TIME=24:00:00
-# Nudging
+./xmlchange RESUBMIT=5 #After first submit, redo it for 5 times 5ys+5x5ys=30ys
+# It is better to devide this long simulation in smaller time series
+# –––––––––––– The machine wallclock setting: ––––––––––––
+./xmlchange --subgroup case.run JOB_WALLCLOCK_TIME=24:00:00
+# –––––––––––– For nudging: ––––––––––––
 ./xmlchange CALENDAR=GREGORIAN # Keep it in the spinup run to avoid unmatching calendar problem
-#./xmlchange CAM_CONFIG_OPTS=-offline_dyn
+#./xmlchange CAM_CONFIG_OPTS=-offline_dyn #If nudging, but compset is not set SDYN 
+
+
 
 #./case.build --clean
 ./case.setup

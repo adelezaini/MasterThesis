@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Spin up simulation of CTRL: 
-# - no vegetation shift, 
+# Spin up simulation of IDEAL: 
+# - idealized vegetation shift, 
 # - AMIP simul (details in %NORPDDMSBC) with sectional scheme(%SEC), 
 # - 30 years (starts in 2000)
 # - no need for nudging (no %SDYN)
@@ -10,7 +10,8 @@ set -o errexit #like assert to check and quit program in case of error
 set -o nounset
 
 # Simulation specifics:
-export CASENAME=CTRL_2000_spinup_f19_f19 
+export CASENAME=IDEAL_2000_spinup_f19_f19 
+export SURFDATA_FILE='/cluster/home/adelez/noresm-inputdata/surfdata_map/surfdata_1.9x2.5_hist_78pfts_CMIP6_simyr2000_c190304_edited.nc'
 #–––––––––––––––––––––––––––––––––––––––––
 
 
@@ -34,24 +35,31 @@ cd cime/scripts
 
 cd $CASEROOT
 
-./xmlchange STOP_OPTION=nyears
-./xmlchange STOP_N=30
-./xmlchange RUN_STARTDATE=2000-01-01
-# Restart
+# –––––––––––– Start simulation in: ––––––––––––
+#./xmlchange RUN_STARTDATE=2000-01-01
+# –––––––––––– Generate restart files every: ––––––––––––
 ./xmlchange REST_OPTION=nyears
 ./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the RESTART_OPTION)
+# –––––––––––– Duration of simulation: ––––––––––––
+./xmlchange STOP_OPTION=nyears
+./xmlchange STOP_N=5 #30 years
 #./xmlchange CONTINUE_RUN=TRUE
-./xmlchange JOB_WALLCLOCK_TIME=24:00:00
-# Nudging
+./xmlchange RESUBMIT=5 #After first submit, redo it for 5 times 5ys+5x5ys=30ys
+# It is better to devide this long simulation in smaller time series
+# –––––––––––– The machine wallclock setting: ––––––––––––
+./xmlchange --subgroup case.run JOB_WALLCLOCK_TIME=24:00:00
+# –––––––––––– For nudging: ––––––––––––
 ./xmlchange CALENDAR=GREGORIAN # Keep it in the spinup run to avoid unmatching calendar problem
-#./xmlchange CAM_CONFIG_OPTS=-offline_dyn
+#./xmlchange CAM_CONFIG_OPTS=-offline_dyn #If nudging, but compset is not set SDYN 
+
 
 #./case.build --clean
 ./case.setup
 
-# Ensure that the land initial files are the ones matching with the modified surfdata in the IDEAL-REAL runs (just en extra check, not essential)
+# Ensure that the land initial file is the same in all runs (just en extra check, not essential)
 echo -e "&clm_inparm\n finidat = '/cluster/shared/noresm/inputdata/lnd/clm2/initdata_map/clmi.BHIST.2000-01-01.0.9x1.25_gx1v7_simyr2000_c181015.nc'">> user_nl_clm
-echo -e " fsurdat = '/cluster/shared/noresm/inputdata/lnd/clm2/surfdata_map/release-clm5.0.18/surfdata_1.9x2.5_hist_78pfts_CMIP6_simyr2000_c190304.nc'">> user_nl_clm
+# Modified idealized surfdata file
+echo -e " fsurdat = ${SURFDATA_FILE}">> user_nl_clm
 # Ensure intrpolation true for initial file and surfdata file
 echo -e " use_init_interp = .true.">> user_nl_clm
 
@@ -59,6 +67,6 @@ echo -e " use_init_interp = .true.">> user_nl_clm
 # NO Aerosol diagnostic and decomposition
 # NO Output in history files
 
-./case.build
-./case.submit
+#./case.build
+#./case.submit
 
