@@ -89,7 +89,7 @@ def tree_separation(tree_macro, original_tree_pfts, lat_shift):
     # In these operationations the overall normalisation to 1 is lost...
     tree_perc = tree_perc/tree_perc.sum('natpft')
     
-    # Fromthe some, divide into the different pfts according to the percentage
+    # From the sum, divide into the different pfts according to the percentage
     tree_pfts = tree_macro * tree_perc
     
     """

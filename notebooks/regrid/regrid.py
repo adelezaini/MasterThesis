@@ -7,7 +7,7 @@ import xesmf as xe
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def regrid(dset_in, dset_target, method='bilinear', mask=True):
-    """ Regrid using xesmf Regrider with a mask, based on https://pavics-sdi.readthedocs.io/en/latest/notebooks/regridding.html
+    """ Regrid using xesmf Regrider with a mask, based on https://pavics-sdi.readthedocs.io/en/latest/notebooks/regridding.html#Third-example-:-Regridding-and-masks
     Args:
     - dset_in (Dataset/DataArray): dataset to be regrided
     - dset_target (Dataset/DataArray): dataset with the target grid
