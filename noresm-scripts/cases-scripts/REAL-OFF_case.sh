@@ -8,11 +8,13 @@
 set -o errexit #like assert to check and quit program in case of error
 set -o nounset
 
+# Simulation specifics:
 export CASENAME=REAL-OFF_2000_f19_f19
 export SPINUP_CASENAME=REAL_2000_spinup_f19_f19
 export CTRL_CASENAME_DATE=CTRL_2000_f19_f19_2007-2013
 export SURFDATA_FILE='/cluster/home/adelez/noresm-inputdata/surfdata_map/surfdata_1.9x2.5_hist_78pfts_CMIP6_simyr2000_c190304_GFDL.nc'
-
+export RESTART_DATE=0031-01-01
+#–––––––––––––––––––––––––––––––––––––––––
 
 export NORESM_ACCOUNT=nn8057k #NN8057K
 export PROJECT=nn8057k
@@ -21,8 +23,8 @@ export NORESM_DATA=/cluster/shared/noresm/inputdata
 export COMPSET=2000_CAM60%NORESM%SEC%NORPDDMSBC%SDYN_CLM50%BGC-CROP_CICE%PRES_DOCN%DOM_MOSART_SGLC_SWAV
 export RES=f19_f19
 #–––––––––––For spin up
-export RESTART_SPINUP_DIR=~/work/archive/$SPINUP_CASENAME/rest/2030-01-01-00000/* #work -> /cluster/work/users/adelez
-export RESTART_DIR=~/noresm-inputdata/restart-cases/$CASENAME/run #noresm-inputdata -> /cluster/projects/nn8057k/adelez/noresm-inputdata
+export RESTART_SPINUP_DIR=~/work/archive/$SPINUP_CASENAME/rest/${RESTART_DATE}-00000 #work -> /cluster/work/users/adelez
+export RESTART_DIR=~/noresm-inputdata/restart-cases/$CASENAME/${RESTART_DATE}-00000 #/run #noresm-inputdata -> /cluster/projects/nn8057k/adelez/noresm-inputdata
 
 
 cd $NORESM_ROOT
@@ -39,20 +41,21 @@ cd $CASEROOT
 
 #–––––––––––––– Restart from spinup
 # 1. move data from work/archive/spinup-casename/rest to noresm-inpudata and unzip it
-mkdir $RESTART_DIR
-cp $RESTART_SPINUP_DIR/* $RESTART_DIR/
-gunzip $RESTART_DIR/*.gz
+mkdir -p $RESTART_DIR
+rsync -avz $RESTART_SPINUP_DIR/* $RESTART_DIR/
+gunzip -fv $RESTART_DIR/*.gz
 # 2. Hybrid run: restart from spinned up climate, but with start date matching nudging
 ./xmlchange RUN_TYPE=hybrid
-./xmlchange RUN_REFDIR=$RESTART_DIR                 # path to restarts 
 ./xmlchange RUN_REFCASE=$SPINUP_CASENAME            # experiment name for restart files
-./xmlchange RUN_REFDATE=2030-01-01                  # date of restart files
+./xmlchange RUN_REFDATE=${RESTART_DATE}                  # date of restart files
 ./xmlchange RUN_STARTDATE=2007-01-01                # date in simulation - matches with ERA-Interim nudging
+# Alternatevely: I could directly copy to RUNDIR=/cluster/work/users/adelez/noresm/CASENAME/run and avoid the next commands
+./xmlchange RUN_REFDIR=$RESTART_DIR                 # path to restarts 
 ./xmlchange GET_REFCASE=TRUE                        # get refcase from outside rundir 
 
 #–––––––––––––––––
 ./xmlchange STOP_OPTION=nyears
-./xmlchange STOP_N=7
+./xmlchange STOP_N=6
 # Restart default
 ./xmlchange REST_OPTION=nyears
 ./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the REST_OPTION)
@@ -68,9 +71,9 @@ gunzip $RESTART_DIR/*.gz
 
 # Change input files
 #echo -e "&clm_inparm\n finidat = '/cluster/home/adelez/noresm-inputdata/CTRL_2000_sec_nudg_f19_f19.clm2.r.2013-01-01-00000.nc'">> user_nl_clm
-#echo -e " fsurdat = ${SURFDATA_FILE}">> user_nl_clm
+echo -e " fsurdat = '${SURFDATA_FILE}'">> user_nl_clm
 # Set interpolation for initial file to "fit" the surface data file
-#echo -e " use_init_interp = .true." >> user_nl_clm
+echo -e " use_init_interp = .true." >> user_nl_clm
 # Nudging ERA-Interrim
 echo -e  "&metdata_nl\n met_nudge_only_uvps = .true.\n met_data_file= \"/cluster/shared/noresm/inputdata/noresm-only/inputForNudging/z_ABG/ERA_f19_tn14/2007-01-01.nc\"\n met_filenames_list = \"/cluster/shared/noresm/inputdata/noresm-only/inputForNudging/z_ABG/ERA_f19_tn14/fileList3.txt\"\n met_rlx_time = 6\n&cam_initfiles_nl\n bnd_topo = \"/cluster/shared/noresm/inputdata/noresm-only/inputForNudging/ERA_f19_tn14/ERA_bnd_topo.nc\"\n" >> user_nl_cam
 # Aerosol diagnostic and decomposition

@@ -35,7 +35,7 @@ cd cime/scripts
 cd $CASEROOT
 
 # –––––––––––– Start simulation in: ––––––––––––
-./xmlchange RUN_STARTDATE=2000-01-01
+#./xmlchange RUN_STARTDATE=2000-01-01
 # –––––––––––– Generate restart files every: ––––––––––––
 ./xmlchange REST_OPTION=nyears
 ./xmlchange REST_N=1 #Produce restart files every REST_N=1 years (or the RESTART_OPTION)
@@ -59,7 +59,7 @@ cd $CASEROOT
 # Ensure that the land initial file is the same in all runs (just en extra check, not essential)
 echo -e "&clm_inparm\n finidat = '/cluster/shared/noresm/inputdata/lnd/clm2/initdata_map/clmi.BHIST.2000-01-01.0.9x1.25_gx1v7_simyr2000_c181015.nc'">> user_nl_clm
 # Modified idealized surfdata file
-echo -e " fsurdat = ${SURFDATA_FILE}">> user_nl_clm
+echo -e " fsurdat = '${SURFDATA_FILE}'">> user_nl_clm
 # Ensure intrpolation true for initial file and surfdata file
 echo -e " use_init_interp = .true.">> user_nl_clm
 
