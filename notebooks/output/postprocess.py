@@ -8,7 +8,7 @@ from dataset_manipulation.postprocess import *
 Example usage:
 python3 postprocess.py casename casealias component history_field
 
-python3 postprocess.py IDEAL-ON_2000_sec_nudg_f19_f19 IDEAL-ON atm h0
+python3 postprocess.py IDEAL-ON_2000_f19_f19 IDEAL-ON atm h0
 """
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––

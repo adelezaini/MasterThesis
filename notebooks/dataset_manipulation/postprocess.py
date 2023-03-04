@@ -64,20 +64,41 @@ def variables_by_component(comp, bvoc=True):
              'SOA': ['N_AER', 'DOD550', 'SOA_A1','SOA_NA','cb_SOA_A1','cb_SOA_NA', 'cb_SOA_A1_OCW', 'cb_SOA_NA_OCW'],
              'CLOUDPROP': ['ACTNL', 'ACTREL','CDNUMC', 'CLDHGH', 'CLDLOW', 'CLDMED', 'CLDTOT', 'CLDLIQ', 'CLOUD', 
                            'CLOUDCOVER_CLUBB', 'FCTL', 'NUMLIQ', 'TGCLDLWP'],
-             'RADIATIVE': ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LWCF', 'SWCF'],
+             'RADIATIVE': ['FSDS','FSNS','FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LWCF', 'SWCF'],
              'TURBFLUXES': ['LHFLX', 'SHFLX'], #, 'OMEGAT'
              }
+        """
+        FSDS = “Downwelling solar flux at surface”
+        FSDSC = “Clearsky downwelling solar flux at surface”
+        FSDSCDRF = “SW downwelling clear sky flux at surface”
+        FSDS_DRF = “SW downelling flux at surface”
+        FSNS = “Net solar flux at surface”
+        FSNSC = “Clearsky net solar flux at surface”
+        FSNT = “Net solar flux at top of model”
+        FSNTC = “Clearsky net solar flux at top of model”
+        FSNTOA = “Net solar flux at top of atmosphere”
+        FSNTOAC = “Clearsky net solar flux at top of atmosphere”
+        FSUS_DRF = “SW upwelling flux at surface”
+        FSUTADRF = “SW upwelling flux at TOA”
+        FSUTOA
+        """
 
     elif comp =='lnd':
 
-        lnd_vars = ['PCT_NAT_PFT','GPP', 'NPP', 'NEE', 'NEP', 'STORVEGN', 'TOTPFTN', 'TOTVEGN',
-                'TOTCOLC', 'TOTECOSYSC', 'TOTPFTC', 'TOTVEGC', 'STORVEGC','TLAI']
+        lnd_vars = ['PCT_NAT_PFT', 'TLAI']
+        biogeochem_vars = ['GPP', 'NPP', 'NEE', 'NEP', 'STORVEGN', 'TOTPFTN', 'TOTVEGN',
+                'TOTCOLC', 'TOTECOSYSC', 'TOTPFTC', 'TOTVEGC', 'STORVEGC']
+        evap_vars = ['QFLX_EVAP_TOT', 'FCEV', 'FCTR', 'FGEV', 'QSOIL', 'QVEGE', 'QVEGT']
 
         if bvoc: #casename.find('OFF')<0.:
             variables = {'LAND': ['MEG_isoprene', 'MEG_limonene', 'MEG_myrcene', 'MEG_ocimene_t_b', 
-                                  'MEG_pinene_a', 'MEG_pinene_b', 'MEG_sabinene'] + lnd_vars}
+                                  'MEG_pinene_a', 'MEG_pinene_b', 'MEG_sabinene'] + lnd_vars,
+                        'BIOGEOCHEM': biogeochem_vars,
+                        'ET': evap_vars}
         else:
-            variables = {'LAND': lnd_vars}
+            variables = {'LAND': lnd_vars,
+                        'BIOGEOCHEM': biogeochem_vars,
+                        'ET': evap_vars}
             
     return variables
 
@@ -181,6 +202,10 @@ def fix_units(ds):
             ds_[var].values = ds_[var].values*1e+3 # Change unit from kg/m2 to g/m2
             ds_[var].attrs["units"] = "g/m$^2$"
             
+        elif var == "QFLX_EVAP_TOT":
+            ds_[var].values = ds_[var].values*60*60*24 # Change unit from mm H2O/s to mm H2O/day
+            ds_[var].attrs["units"] = "mm/day"
+            
         elif var == "FLNT" or var == "FSNT" or var == "FLNT_DRF" or var == "FLNTCDRF" or var == "FSNT_DRF" or var == "FSNTCDRF" or var =="LHFLX" or var =="SHFLX":
             ds_[var].attrs["units"] = "W/m$^2$" # Change unit from W/m^2 to W/m2, like the other radiative fluxes
          
@@ -217,6 +242,12 @@ def fix_names(ds):
         elif var == "TGCLDLWP":
             ds_[var].rename('LWP')
             ds_[var].attrs["CLM5_name"] = 'TGCLDLWP'
+            
+            
+        elif var == "QFLX_EVAP_TOT":
+            ds_[var].rename('ET')
+            ds_[var].attrs["CLM5_name"] = 'QFLX_EVAP_TOT'
+            
         else:
             continue
             
@@ -346,7 +377,7 @@ def save_postprocessed(ds, component, processed_path, casealias, pressure_vars=T
     
     date = str(ds.time.dt.year.values[0])+str(ds.time.dt.year.values[-1])
     categories = list(variables_by_component(component).keys()) 
-    #['LAND'] or ['BVOC', 'SOA', 'CLOUDPROP', 'RADIATIVE', 'TURBFLUXES']
+    #['LAND', 'BIOGEOCHEM', 'ET'] or ['BVOC', 'SOA', 'CLOUDPROP', 'RADIATIVE', 'TURBFLUXES']
     
     if component == 'atm':
         variables = atm_always_include      
