@@ -17,9 +17,9 @@ export ARCHIVE_DIR='/cluster/home/adelez/storage/archive'
 export TARGET_DIR='/cluster/home/adelez/noresm-inputdata/BVOCfromCTRL'
 
 # Create emissions file for SFisoprene
-python3 create_em_files_high_res.py $CTRL_CASENAME 2007 2013 SFisoprene h1 #$ARCHIVE_DIR $TARGET_DIR
+python3 create_em_files_high_res.py $CTRL_CASENAME 2007 2012 SFisoprene h1 #$ARCHIVE_DIR $TARGET_DIR
 # Create emissions file for SFmonoterp
-python3 create_em_files_high_res.py $CTRL_CASENAME 2007 2013 SFmonoterp h1 #$ARCHIVE_DIR $TARGET_DIR
+python3 create_em_files_high_res.py $CTRL_CASENAME 2007 2012 SFmonoterp h1 #$ARCHIVE_DIR $TARGET_DIR
 #
 # Remove temporary files
 #rm $TARGET_DIR/tmp_*.nc
