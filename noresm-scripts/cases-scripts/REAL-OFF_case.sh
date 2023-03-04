@@ -11,7 +11,7 @@ set -o nounset
 # Simulation specifics:
 export CASENAME=REAL-OFF_2000_f19_f19
 export SPINUP_CASENAME=REAL_2000_spinup_f19_f19
-export CTRL_CASENAME_DATE=CTRL_2000_f19_f19_2007-2013
+export CTRL_CASENAME_DATE=CTRL_2000_f19_f19_2007-2012
 export SURFDATA_FILE='/cluster/home/adelez/noresm-inputdata/surfdata_map/surfdata_1.9x2.5_hist_78pfts_CMIP6_simyr2000_c190304_GFDL.nc'
 export RESTART_DATE=0031-01-01
 #–––––––––––––––––––––––––––––––––––––––––
@@ -85,6 +85,6 @@ echo -e "&cam_inparam\n mfilt = 1, 48\n nhtfrq = 0, 1\n avgflag_pertape='A','I'\
 echo -e  "&megan_emis_nl\n megan_specifier = ''\n" >> user_nl_cam
 echo -e  "&chem_inparm\n srf_emis_specifier = 'BC_AX  ->  /cluster/shared/noresm/inputdata/atm/cam/chem/emis/cmip6_emissions_version20180512/emissions_cmip6_noresm2_BC_AX_anthrosurfALL_surface_1849-2015_1.9x2.5_version20180512.nc',\n'BC_N   ->  /cluster/shared/noresm/inputdata/atm/cam/chem/emis/cmip6_emissions_version20180512/emissions_cmip6_noresm2_BC_N_anthrosurfALL_surface_1849-2015_1.9x2.5_version20180512.nc',\n'OM_NI  ->  /cluster/shared/noresm/inputdata/atm/cam/chem/emis/cmip6_emissions_version20180512/emissions_cmip6_noresm2_OM_NI_anthrosurfALL_surface_1849-2015_1.9x2.5_version20180512.nc',\n'SO2    ->  /cluster/shared/noresm/inputdata/atm/cam/chem/emis/cmip6_emissions_version20180512/emissions_cmip6_noresm2_SO2_anthrosurfALL_surface_1849-2015_1.9x2.5_version20180512.nc',\n'SO4_PR ->  /cluster/shared/noresm/inputdata/atm/cam/chem/emis/cmip6_emissions_version20180512/emissions_cmip6_noresm2_SO4_PR_anthrosurfALL_surface_1849-2015_1.9x2.5_version20180512.nc'\n'isoprene -> /cluster/home/adelez/noresm-inputdata/BVOCfromCTRL/ems_${CTRL_CASENAME_DATE}_SFisoprene_addleapyear.nc',\n'monoterp -> /cluster/home/adelez/noresm-inputdata/BVOCfromCTRL/ems_${CTRL_CASENAME_DATE}_SFmonoterp_addleapyear.nc'" >> user_nl_cam
 
-#./case.build
-#./case.submit
+./case.build
+./case.submit
 
