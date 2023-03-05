@@ -289,7 +289,7 @@ def aerosol_cloud_forcing_scomposition_Ghan(ds):
     ds_ = ds.copy(deep=True)
 
     # If the dataset is provided of the exential variables to perfom the Ghan's scomposition...
-    if ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF'] in list(ds.data_vars):
+    if all(elem in list(ds.data_vars) for elem in ['FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF']):
         
         for var in Ghan_vars:
             
@@ -385,9 +385,10 @@ def save_postprocessed(ds, component, processed_path, casealias, pressure_vars=T
        
     elif component == 'lnd': 
         variables = lnd_always_include
+        if casename.find('OFF')>0.: bvoc = False # deactivate bvoc variables in simulation with bvoc controlled (tagged with '*-OFF')
          
     for cat in categories:
-        variables = variables + variables_by_component(component)[cat]
+        variables = variables + variables_by_component(component, bvoc)[cat]
         if cat == 'RADIATIVE': variables = variables + Ghan_vars + variables_by_component(component)['TURBFLUXES']
         if cat == 'TURBFLUXES': continue # merge turbfluxes with radiative
         file_out = casealias+'_'+cat+'_'+date+'.nc'
