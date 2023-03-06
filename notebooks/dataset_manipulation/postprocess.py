@@ -64,8 +64,7 @@ def variables_by_component(comp, bvoc=True):
              'SOA': ['N_AER', 'DOD550', 'SOA_A1','SOA_NA','cb_SOA_A1','cb_SOA_NA', 'cb_SOA_A1_OCW', 'cb_SOA_NA_OCW'],
              'CLOUDPROP': ['ACTNL', 'ACTREL','CDNUMC', 'CLDHGH', 'CLDLOW', 'CLDMED', 'CLDTOT', 'CLDLIQ', 'CLOUD', 
                            'CLOUDCOVER_CLUBB', 'FCTL', 'NUMLIQ', 'TGCLDLWP'],
-             'RADIATIVE': ['FSDS','FSNS','FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LWCF', 'SWCF'],
-             'TURBFLUXES': ['LHFLX', 'SHFLX'], #, 'OMEGAT'
+             'RADIATIVE': ['FSDS','FSNS','FLNT', 'FSNT', 'FLNT_DRF', 'FLNTCDRF', 'FSNTCDRF', 'FSNT_DRF', 'LWCF', 'SWCF', 'LHFLX', 'SHFLX'], #, 'OMEGAT'
              }
         """
         FSDS = “Downwelling solar flux at surface”
@@ -104,7 +103,7 @@ def variables_by_component(comp, bvoc=True):
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-def create_dataset(raw_path, casename, comp, history_field='h0', full_dset = False, 
+def create_dataset(raw_path, casename, comp, history_field='h0', vars=None, full_dset = False,
                    fix_timestamp = 'datetime64', spinup_months = 12, pressure_vars=False):
     """Given a list of raw netcdf files, convert them into a Xarray Dataset with merged time
     Args:
@@ -157,7 +156,8 @@ def create_dataset(raw_path, casename, comp, history_field='h0', full_dset = Fal
             variables = lnd_always_include
             if casename.find('OFF')>0.: bvoc = False # deactivate bvoc variables in simulation with bvoc controlled (tagged with '*-OFF')
 
-        variables = variables + sum([*variables_by_component(comp, bvoc).values()], []) # from dict to flat list
+        if not vars: variables = variables + sum([*variables_by_component(comp, bvoc).values()], []) # from dict to flat list
+        else: variables = variables + variables_by_component(comp, bvoc)[vars]
         
         return ds[variables]
 
@@ -240,7 +240,7 @@ def fix_names(ds):
             ds_[var].attrs["long_name"] = "SOA_NA burden column in cloud water - SOA formed by co-nucleation with SO4"
         
         elif var == "TGCLDLWP":
-            ds_[var].rename('LWP')
+            ds_[var] = ds_[var].rename('LWP')
             ds_[var].attrs["CLM5_name"] = 'TGCLDLWP'
             
             
@@ -379,19 +379,19 @@ def save_postprocessed(ds, component, processed_path, casealias, pressure_vars=T
     categories = list(variables_by_component(component).keys()) 
     #['LAND', 'BIOGEOCHEM', 'ET'] or ['BVOC', 'SOA', 'CLOUDPROP', 'RADIATIVE', 'TURBFLUXES']
     
-    bvoc = True # variable for adding bvoc variables in the land component, useless in atm
-    if component == 'atm':
-        variables = atm_always_include      
-        if pressure_vars: variables = variables + pressure_variables
-       
-    elif component == 'lnd': 
-        variables = lnd_always_include
-        if casename.find('OFF')>0.: bvoc = False # deactivate bvoc variables in simulation with bvoc controlled (tagged with '*-OFF')
-         
     for cat in categories:
+    
+        bvoc = True # variable for adding bvoc variables in the land component, useless in atm
+        if component == 'atm':
+            variables = atm_always_include
+            if pressure_vars: variables = variables + pressure_variables
+           
+        elif component == 'lnd':
+            variables = lnd_always_include
+            if casename.find('OFF')>0.: bvoc = False # deactivate bvoc variables in simulation with bvoc controlled (tagged with '*-OFF')
+             
         variables = variables + variables_by_component(component, bvoc)[cat]
-        if cat == 'RADIATIVE': variables = variables + Ghan_vars + variables_by_component(component)['TURBFLUXES']
-        if cat == 'TURBFLUXES': continue # merge turbfluxes with radiative
+        if cat == 'RADIATIVE': variables = variables + Ghan_vars
         file_out = casealias+'_'+cat+'_'+date+'.nc'
         ds[variables].to_netcdf(processed_path+file_out)
         print(file_out)
