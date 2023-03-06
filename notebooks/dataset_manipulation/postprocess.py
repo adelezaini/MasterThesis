@@ -379,6 +379,7 @@ def save_postprocessed(ds, component, processed_path, casealias, pressure_vars=T
     categories = list(variables_by_component(component).keys()) 
     #['LAND', 'BIOGEOCHEM', 'ET'] or ['BVOC', 'SOA', 'CLOUDPROP', 'RADIATIVE', 'TURBFLUXES']
     
+    bvoc = True # variable for adding bvoc variables in the land component, useless in atm
     if component == 'atm':
         variables = atm_always_include      
         if pressure_vars: variables = variables + pressure_variables
