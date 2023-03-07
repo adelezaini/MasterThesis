@@ -234,6 +234,8 @@ def fix_names(ds):
             ds_[var].attrs["long_name"] = "SOA_A1 burden column - SOA condensate on existing particles from SOAGSV (gas)"
         elif var == "cb_SOA_NA":
             ds_[var].attrs["long_name"] = "SOA_NA burden column - SOA formed by co-nucleation with SO4"
+            ds_['cb_SOA_TOT'] = ds_['cb_SOA_NA'] + ds_['cb_SOA_A1']
+            ds_['cb_SOA_TOT'].attrs['long_name'] = "total SOA burden column"
         elif var == "cb_SOA_A1_OCW":
             ds_[var].attrs["long_name"] = "SOA_A1 burden column in cloud water - SOA condensate on existing particles from SOAGSV (gas)"
         elif var == "cb_SOA_NA_OCW":
@@ -245,7 +247,7 @@ def fix_names(ds):
             
             
         elif var == "QFLX_EVAP_TOT":
-            ds_[var].rename('ET')
+            ds_[var] = ds_[var].rename('ET')
             ds_[var].attrs["CLM5_name"] = 'QFLX_EVAP_TOT'
             
         else:
