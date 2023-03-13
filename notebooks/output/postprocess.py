@@ -25,7 +25,7 @@ processed_path = '../../processed-data/postprocessing/'
 def main(casename, casealias, component, history_field='h0', vars=''):
     
     ds = create_dataset(raw_path, casename, component, history_field=history_field, vars=vars, pressure_vars=True)
-    ds = fix_names(fix_units(ds))
+    ds = fix_ds(fix_units(ds))
     ds = aerosol_cloud_forcing_scomposition_Ghan(ds)
     save_postprocessed(ds, component, processed_path, casealias)
     
