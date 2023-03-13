@@ -12,7 +12,7 @@ The thesis work explores the response in the atmosphere-land interactions to an 
 - `data`*: original land surface file and vegetation data from LPJ-GUESS ([Tang et al. (2021)](https://www.researchsquare.com/article/rs-1143422/v1)).
 - `noresm-inputdata`*: input files to run [NorESM2](https://github.com/NorESMhub/NorESM).
 - `noresm-scripts`: scripts and other files used to run simulations in [NorESM2](https://github.com/NorESMhub/NorESM).
-- `notebooks`** : jupyter notebooks and python scripts to process and analyse input and output data
+- `notebooks`** : jupyter notebooks and python scripts to process, analyse and visualize input and output data
 - `processed-data`*: data after pre- and post-processing
 - `figures`: vegetation maps and results
 - `training`: some scripts to learn and train how to analyse model data
