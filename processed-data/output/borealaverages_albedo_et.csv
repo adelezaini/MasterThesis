@@ -1,0 +1,7 @@
+,SW_rest abs,SW_rest rel,QFLX_EVAP_TOT abs,QFLX_EVAP_TOT rel
+IDEAL-ON - CTRL,0.328  $W/m^2$,0.19%,6.43 $\times 10^{-3}$ mm/day,0.95%
+IDEAL-ON - IDEAL-OFF,0.013  $W/m^2$,0.01%,1.46 $\times 10^{-3}$ mm/day,0.21%
+IDEAL-OFF - CTRL,0.315  $W/m^2$,0.19%,4.97 $\times 10^{-3}$ mm/day,0.74%
+REAL-ON - CTRL,0.480  $W/m^2$,0.28%,5.44 $\times 10^{-3}$ mm/day,0.81%
+REAL-ON - REAL-OFF,-0.001  $W/m^2$,-0.00%,1.09 $\times 10^{-3}$ mm/day,0.16%
+REAL-OFF - CTRL,0.480  $W/m^2$,0.29%,4.35 $\times 10^{-3}$ mm/day,0.64%
