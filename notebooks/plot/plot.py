@@ -18,10 +18,10 @@ from textwrap import wrap
 
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
-plt.rcParams['font.size'] = '15'
 #plt.rcParams['figure.facecolor'] = 'none'
 plt.rcParams['figure.titlesize'] = '22'
 plt.rcParams['axes.titlesize'] = '18'
+plt.rcParams['font.size'] = '15'
 
 ################ Miscellaneous ################
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -83,7 +83,7 @@ def cut_extent_Orthographic(ax, lat=None, extent=None):
 fig_folder = '../../figures/results/'
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
 def boreal_map(da, title, figsize = [10,8], ax=None, projection=ccrs.Orthographic(0, 90), extent_lat = None,
-                   grid=True, earth=False, contourf=False, units=None, cbar_kwargs={}, **kwargs):
+                   grid=True, earth=False, contourf=False, units=None, text_wrap=30, cbar_kwargs={}, **kwargs):
     """Plot a spatial distribution of 'da', specially adapted for boreal and artic area.
     Args:
         - da (xr.DataArray): variable to plot with dimension [lat,lon]
@@ -127,7 +127,8 @@ def boreal_map(da, title, figsize = [10,8], ax=None, projection=ccrs.Orthographi
             #if arg == 'label': cbar_kwargs[arg] = da.long_name+'\n['+da.units+']'
     cbar = plt.colorbar(p, ax = [ax], **cbar_kwargs)
     if not units: units = da.units
-    cbar.set_label("\n".join(wrap(da.long_name+'\n['+units+']', 35)))
+    cbar.set_label("\n".join(wrap(da.long_name+'\n['+units+']', text_wrap)), size=14)
+    cbar.ax.tick_params(labelsize=13)
     #cbar = plt.colorbar(p, ax = [ax], location = 'bottom', pad=0.05,shrink=0.8, aspect=40, extend='both', **cbar_kwargs, label=da.long_name+'\n['+da.units+']')#'PTF on the natveg landunit [% of landunit]')
 
     # Costum axis features
@@ -137,11 +138,12 @@ def boreal_map(da, title, figsize = [10,8], ax=None, projection=ccrs.Orthographi
     if not ax: plt.show()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def set_colorbar(ds, kwargs):
+def set_colorbar(ds, kwargs, cbar_ticks=True):
     if 'vmax' in list(kwargs.keys()):
         vmax = kwargs['vmax']
         kwargs['vmin'] = - vmax
-    if 'cbar_kwargs' in list(kwargs.keys()):
+    if cbar_ticks and 'vmax' in list(kwargs.keys()):
+        if not 'cbar_kwargs' in list(kwargs.keys()): kwargs=dict(cbar_kwargs={}, **kwargs)
         kwargs['cbar_kwargs']['ticks'] = [-vmax, -vmax*0.5, 0, vmax*0.5, vmax]
     if not 'norm' in list(): kwargs['norm'] = MidpointNormalize(midpoint=0.)
     #if 'levels' in list(kwargs.keys()):
@@ -161,27 +163,31 @@ def plot_difference_map(da_dict, case1, case2, variable, ax = None, relative=Fal
         if not 'vmax' in list(kwargs.keys()): kwargs = dict(vmax=100, **kwargs)
     if variable =='N_AER': diff=diff.isel(lev=-1)
         
-    set_colorbar(diff, kwargs)
+    set_colorbar(diff, kwargs, cbar_ticks=False)
 
     boreal_map(diff, ax = ax, title=case1+' – '+case2, cmap=cmap, extent_lat = boreal_lat, units = '%' if relative else None, **kwargs)
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def spatial_averages(ds_dict, variable, title, relative = False, **kwargs):
+def spatial_averages(ds_dict, variable, title, relative = False, vmax_mid = None, vmax_bot = None, savefig=None, **kwargs):
     
     fig, axes = plt.subplots(3,2, figsize=[12,16], subplot_kw={'projection':ccrs.Orthographic(0, 90)})
 
     #plot_args = dict(cbar_kwargs={'extend':'both'}, **kwargs)
 
-    plot_difference_map(ds_dict, 'IDEAL-ON', 'CTRL', variable, ax=axes.flat[0], relative=relative, **kwargs)
-    plot_difference_map(ds_dict, 'REAL-ON', 'CTRL', variable, ax=axes.flat[1], relative=relative, **kwargs)
-    plot_difference_map(ds_dict, 'IDEAL-ON', 'IDEAL-OFF', variable, ax=axes.flat[2], relative=relative, **kwargs)
-    plot_difference_map(ds_dict, 'REAL-ON', 'REAL-OFF', variable, ax=axes.flat[3], relative=relative, **kwargs)
-    plot_difference_map(ds_dict, 'IDEAL-OFF', 'CTRL', variable, ax=axes.flat[4], relative=relative, **kwargs)
-    plot_difference_map(ds_dict, 'REAL-OFF', 'CTRL', variable, ax=axes.flat[5], relative=relative, **kwargs)
+    if kwargs['vmax']: vmax = kwargs['vmax']
+    for i, cases in enumerate([['IDEAL-ON', 'CTRL'], ['REAL-ON', 'CTRL'], ['IDEAL-ON', 'IDEAL-OFF'], ['REAL-ON', 'REAL-OFF'], ['IDEAL-OFF', 'CTRL'], ['REAL-OFF', 'CTRL']]):
+        if vmax_mid and (i==2 or i ==3): kwargs['vmax'] = vmax_mid
+        if vmax_bot and (i==4 or i ==5): kwargs['vmax'] = vmax_bot
+        plot_difference_map(ds_dict, cases[0], cases[1], variable, ax=axes.flat[i], relative=relative, **kwargs)
+        if vmax: kwargs['vmax'] = vmax
+        else: kwargs['vmax'] = None
+        
     plt.suptitle(title)
-    figtitle = fig_folder+variable
+    if not savefig:
+        figtitle = fig_folder+variable
+    else: figtitle = fig_folder+savefig
     if relative: figtitle=figtitle+'_relative'
-    plt.savefig(figtitle+'.pdf')
+    plt.savefig(figtitle+'.pdf', pad_inches=0.5, bbox_inches='tight')
     plt.show()
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -200,16 +206,17 @@ def plot_difference_map_winter_summer(axes, da_dict, case1, case2, variable, sea
     
     if variable=='N_AER': diff=diff.isel(lev=-1)
         
+    kwargs=dict(cmap='RdBu_r', extent_lat = boreal_lat, units = '%' if relative else None, cbar_kwargs=dict(shrink=1.1, aspect=25), **kwargs)
     set_colorbar(diff, kwargs)
 
     for i, season in enumerate(seasons):
-        boreal_map(diff.sel(season=season), ax=axes.flat[i],title=season, cmap='RdBu_r', extent_lat = boreal_lat, units = '%' if relative else None, **kwargs)
+        boreal_map(diff.sel(season=season), ax=axes.flat[i],title=season, **kwargs)
     plt.subplots_adjust(bottom=0.3, top=0.8)
     plt.suptitle(case1+' – '+case2, y=0.9,size=18)
     plt.tight_layout()
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def spatial_averages_winter_summer(ds_dict, variable, title, figsize=[20,30], dpi=300, relative = False, cbar_kwargs = {},**kwargs):
+def spatial_averages_winter_summer(ds_dict, variable, title, figsize=[20,30], dpi=300, relative = False, savefig=None, **kwargs):
     backend = mpl.get_backend()
     mpl.use('agg')
 
@@ -220,7 +227,7 @@ def spatial_averages_winter_summer(ds_dict, variable, title, figsize=[20,30], dp
     for i, cases in enumerate([['IDEAL-ON', 'CTRL'], ['REAL-ON', 'CTRL'], ['IDEAL-ON', 'IDEAL-OFF'], ['REAL-ON', 'REAL-OFF'], ['IDEAL-OFF', 'CTRL'], ['REAL-OFF', 'CTRL']]):
         fig, ax = plt.subplots(**plot_args)
         axes.append(ax)
-        plot_difference_map_winter_summer(axes[i], ds_dict, *cases, variable, relative = relative, cbar_kwargs=dict(shrink=1.1, aspect=25, **cbar_kwargs), **kwargs)
+        plot_difference_map_winter_summer(axes[i], ds_dict, *cases, variable, relative = relative, **kwargs)
         figs.append(fig)
     
     a_list = []
@@ -240,9 +247,11 @@ def spatial_averages_winter_summer(ds_dict, variable, title, figsize=[20,30], dp
     ax.set_axis_off()
     ax.matshow(a)
     plt.suptitle(title, size=33, y=0.9)
-    figtitle = fig_folder+variable+'_seasons'
+    if not savefig:
+        figtitle = fig_folder+variable+'_seasons'
+    else: figtitle = fig_folder+savefig+'_seasons'
     if relative: figtitle=figtitle+'_relative'
-    plt.savefig(figtitle+'.pdf')
+    plt.savefig(figtitle+'.pdf', pad_inches=0.3, bbox_inches='tight')
     plt.show()
 
 
@@ -252,7 +261,7 @@ def spatial_averages_winter_summer(ds_dict, variable, title, figsize=[20,30], dp
 
 
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
-def plot_difference_map_4seasons(da_dict, case1, case2, variable, title, relative=True, **kwargs):
+def plot_difference_map_4seasons(da_dict, case1, case2, variable, title, relative=True, figsize=[17,6], **kwargs):
     seasons = ['DJF', 'MAM','JJA', 'SON']
     
     da1 = da_dict[case1][variable].groupby('time.season').mean('time')
@@ -265,15 +274,53 @@ def plot_difference_map_4seasons(da_dict, case1, case2, variable, title, relativ
     diff = (da1-da2)
     if relative:
         diff = diff/da2*100
-        if 'vmax' in list(kwargs.keys()): kwargs['vmax']=100
-        else: kwargs = dict(vmax=100, **kwargs)
-        if 'vmin' in list(kwargs.keys()): kwargs['vmin']=-100
-        else: kwargs = dict(vmin=-100, **kwargs)
+        if not 'vmax' in list(kwargs.keys()): kwargs = dict(vmax=100, **kwargs)
     if variable=='N_AER': diff=diff.isel(lev=-1)
+    
+    set_colorbar(diff, kwargs)
         
-    fig, axes = plt.subplots(1,4, figsize=[17,5], subplot_kw={'projection':ccrs.Orthographic(0, 90)})#,dpi=100)
+    fig, axes = plt.subplots(1,4, figsize=figsize, subplot_kw={'projection':ccrs.Orthographic(0, 90)})#,dpi=100)
     
     for i, season in enumerate(seasons):
         boreal_map(diff.sel(season=season), ax=axes.flat[i], title=season, cmap='RdBu_r', extent_lat =45.,**kwargs)
-    plt.suptitle(title+':\n'+case1+' – '+case2, y=1.05)
+    plt.suptitle(title+':\n'+case1+' – '+case2)
+    plt.show()
+    return fig
+    
+#––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
+def spatial_averages_4seasons(ds_dict, variable, title, figsize=[20,60], dpi=300, relative = False, savefig=None, **kwargs):
+    seasons = ['DJF', 'MAM','JJA', 'SON']
+    
+    backend = mpl.get_backend()
+    mpl.use('agg')
+
+    plot_args = dict(nrows=1, ncols=4, figsize=[figsize[0]/2.*1.3, figsize[1]/12.], dpi=dpi, subplot_kw={'projection':ccrs.Orthographic(0, 90)})
+    
+    figs = []
+    axes = []
+    for i, cases in enumerate([['IDEAL-ON', 'CTRL'], ['IDEAL-ON', 'IDEAL-OFF'], ['IDEAL-OFF', 'CTRL'], ['REAL-ON', 'CTRL'], ['REAL-ON', 'REAL-OFF'], ['REAL-OFF', 'CTRL']]):
+        fig, ax = plt.subplots(**plot_args)
+        axes.append(ax)
+        plot_difference_map_winter_summer(axes[i], ds_dict, *cases, variable, seasons = seasons, relative = relative, **kwargs)
+        figs.append(fig)
+    
+    a_list = []
+    for fig in figs:
+        c = fig.canvas
+        c.draw()
+        a_list.append(np.array(c.buffer_rgba()))
+        
+    a = np.vstack(a_list)
+        
+    mpl.use(backend)
+    fig,ax = plt.subplots(figsize=figsize)
+    fig.subplots_adjust(0, 0, 1, 1)
+    ax.set_axis_off()
+    ax.matshow(a)
+    plt.suptitle(title, size=33, y=0.9)
+    if not savefig:
+        figtitle = fig_folder+variable+'_4seasons'
+    else: figtitle = fig_folder+savefig+'_4seasons'
+    if relative: figtitle=figtitle+'_relative'
+    plt.savefig(figtitle+'.pdf', pad_inches=0.3, bbox_inches='tight')
     plt.show()

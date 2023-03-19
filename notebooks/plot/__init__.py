@@ -1,1 +1,1 @@
-from .plot import dict_to_legend, plot_title, ax_map_properties, cut_extent_Orthographic, boreal_map, plot_difference_map, spatial_averages, MidpointNormalize, plot_difference_map_4seasons, plot_difference_map_winter_summer,  spatial_averages_winter_summer
+from .plot import dict_to_legend, plot_title, ax_map_properties, cut_extent_Orthographic, boreal_map, plot_difference_map, spatial_averages, MidpointNormalize, plot_difference_map_4seasons, plot_difference_map_winter_summer,  spatial_averages_winter_summer, spatial_averages_4seasons

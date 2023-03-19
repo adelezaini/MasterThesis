@@ -6,7 +6,7 @@ import glob #return all file paths that match a specific pattern
 atm_always_include = ['LANDFRAC', 'GRIDAREA', 'gw', 'date', 'time_bnds', 'T', 'TS', 'U', 'V']
 lnd_always_include = ['area', 'landfrac', 'landmask', 'pftmask', 'PCT_LANDUNIT']
 pressure_variables = ['P0', 'hyam', 'hybm', 'PS', 'hyai', 'hybi', 'ilev']
-Ghan_vars = ['SWDIR', 'LWDIR', 'DIR', 'SWCF', 'LWCF', 'NCFT', 'SW_rest', 'LW_rest']
+Ghan_vars = ['SWDIR', 'LWDIR', 'DIR', 'SWCF', 'LWCF', 'NCFT', 'SW_rest', 'LW_rest', 'FREST', 'FTOT', 'SWTOT', 'LWTOT']
 
     
 #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––#
@@ -230,6 +230,7 @@ def fix_ds(ds):
     
     for var in list(ds_.keys()):
         
+        """
         if var == "SOA_A1":
             ds_[var].attrs["long_name"] = "SOA_A1 concentration - SOA condensate on existing particles from SOAGSV (gas)"
         elif var == "SOA_NA":
@@ -242,7 +243,7 @@ def fix_ds(ds):
             ds_[var].attrs["long_name"] = "SOA_A1 burden column in cloud water - SOA condensate on existing particles from SOAGSV (gas)"
         elif var == "cb_SOA_NA_OCW":
             ds_[var].attrs["long_name"] = "SOA_NA burden column in cloud water - SOA formed by co-nucleation with SO4"
-        
+    
         elif var == "TGCLDLWP":
             ds_[var] = ds_[var].rename('LWP')
             ds_[var].attrs["CLM5_name"] = 'TGCLDLWP'
@@ -263,7 +264,27 @@ def fix_ds(ds):
             continue
             
         #print(var, "-", ds_[var].attrs["long_name"])
-            
+        """
+        """
+        if var == "FSNT":
+            ds_[var].rename('SWTOT')
+            ds_[var].assign_attrs["CLM5_name"] = "FSNT"
+        if var == "FLNT":
+            ds_[var].rename('LWTOT')
+            ds_[var].assign_attrs["CLM5_name"] = "FLNT"
+        if var == "FSNT_DRF":
+            ds_[var].rename('SW_clean')
+            ds_[var].assign_attrs["CLM5_name"] = "FSNT_DRF"
+        if var == "FSNTCDRF":
+            ds_[var].rename('SW_clean_clear')
+            ds_[var].assign_attrs["CLM5_name"] = "FSNTCDRF"
+        if var == "FLNT_DRF":
+            ds_[var].rename('LW_clean')
+            ds_[var].assign_attrs["CLM5_name"] = "FLNT_DRF"
+        if var == "FLNTCDRF":
+            ds_[var].rename('LW_clean_clear')
+            ds_[var].assign_attrs["CLM5_name"] = "FLNTCDRF"
+        """
     for var in ['cb_SOA_dry', 'AREL_incld', 'AWNC_incld', 'ACTNL_incld', 'ACTREL_incld']:
         ## Author: Sara M. Blichner
         if var == 'cb_SOA_dry':
@@ -297,27 +318,6 @@ def fix_ds(ds):
             ds_.attrs['long_name'] = 'Wind speed'
             ds_.attrs['units'] = 'm/s'
         
-            
-        """
-        if var == "FSNT":
-            ds_[var].rename('SWTOT')
-            ds_[var].assign_attrs["CLM5_name"] = "FSNT"
-        if var == "FLNT":
-            ds_[var].rename('LWTOT')
-            ds_[var].assign_attrs["CLM5_name"] = "FLNT"
-        if var == "FSNT_DRF":
-            ds_[var].rename('SW_clean')
-            ds_[var].assign_attrs["CLM5_name"] = "FSNT_DRF"
-        if var == "FSNTCDRF":
-            ds_[var].rename('SW_clean_clear')
-            ds_[var].assign_attrs["CLM5_name"] = "FSNTCDRF"
-        if var == "FLNT_DRF":
-            ds_[var].rename('LW_clean')
-            ds_[var].assign_attrs["CLM5_name"] = "FLNT_DRF"
-        if var == "FLNTCDRF":
-            ds_[var].rename('LW_clean_clear')
-            ds_[var].assign_attrs["CLM5_name"] = "FLNTCDRF"
-        """
         
     print("Fix names and variables completed")
     return ds_
@@ -341,46 +341,62 @@ def aerosol_cloud_forcing_scomposition_Ghan(ds):
             if 'SWDIR' == var:
                 ds_[var] = ds_['FSNT'] - ds_['FSNT_DRF']
                 ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
-                ds_[var].attrs['long_name'] = "Shortwave aerosol direct radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Shortwave aerosol direct radiative flux - Ghan's scomposition"
 
             if 'LWDIR' == var:
                 ds_[var] = -(ds_['FLNT'] - ds_['FLNT_DRF'])
                 ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-                ds_[var].attrs['long_name'] = "Longwave aerosol direct radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Longwave aerosol direct radiative flux - Ghan's scomposition"
 
 
             if 'DIR' == var:
                 ds_[var] = ds_['LWDIR'] + ds_['SWDIR']
                 ds_[var].attrs['units'] = ds_['LWDIR'].attrs['units']
-                ds_[var].attrs['long_name'] = "Net aerosol direct radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Net aerosol direct radiative flux - Ghan's scomposition"
 
 
             if 'SWCF' == var: # this will overwrite the existing one
                 ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF']
                 ds_[var].attrs['units'] = ds_['FSNT_DRF'].attrs['units']
-                ds_[var].attrs['long_name'] = "Shortwave cloud radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Shortwave cloud radiative flux - Ghan's scomposition"
 
 
             if 'LWCF' == var: # this will overwrite the existing one
                 ds_[var] = -(ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
                 ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-                ds_[var].attrs['long_name'] = "Longwave cloud radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Longwave cloud radiative flux - Ghan's scomposition"
 
 
             if 'NCFT' == var:
                 ds_[var] = ds_['FSNT_DRF'] - ds_['FSNTCDRF'] - (ds_['FLNT_DRF'] - ds_['FLNTCDRF'])
                 ds_[var].attrs['units'] = ds_['FLNT_DRF'].attrs['units']
-                ds_[var].attrs['long_name'] = "Net cloud radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Net cloud radiative flux - Ghan's scomposition"
 
 
             if 'SW_rest' == var:
                 ds_[var] = ds_['FSNTCDRF']
-                ds_[var].attrs['long_name'] = "Shortwave surface albedo radiative forcing - Ghan's scomposition"
+                ds_[var].attrs['long_name'] = "Shortwave surface change radiative flux - Ghan's scomposition"
 
 
             if 'LW_rest' == var:
-                ds_[var] = ds_['FLNTCDRF']
-                ds_[var].attrs['long_name'] = "Clear sky total column longwave flux - Ghan's scomposition"
+                ds_[var] = -ds_['FLNTCDRF']
+                ds_[var].attrs['long_name'] = "Longwave surface change radiative flux - Ghan's scomposition"#Clear sky total column longwave flux - Ghan's scomposition"
+                
+            if 'FREST' == var:
+                ds_[var] = ds_['FSNTCDRF'] - ds_['FLNTCDRF']
+                ds_[var].attrs['units'] = ds_['FSNTCDRF'].attrs['units']
+                ds_[var].attrs['long_name'] = "Net surface change radiative flux - Ghan's scomposition"
+                
+            if 'FTOT' == var:
+                ds_[var] = ds_['FSNT'] - ds_['FLNT']
+                ds_[var].attrs['units'] = ds_['FLNT'].attrs['units']
+                ds_[var].attrs['long_name'] = "Net radiative flux at top of the model"
+                
+            if 'SWTOT' == var:
+                ds_[var] = ds_['FSNT']
+
+            if 'LWTOT' == var:
+                ds_[var] = -(ds_['FLNT'])
                 
             #print(var, "-", ds_[var].attrs["long_name"])
                 
